@@ -1,0 +1,121 @@
+from miscell import check
+
+keywords = {'def': 0, 'if': 0, 'elif': 0,
+        'else': 0, 'while': 0, 'end': 0,
+        'main': 0, 'return': 0}
+
+multichar_ops = {'value_at': 0, 'address_of': 0, 'block': 0,
+                'inject': 0, 'print': 0, 'and': 0, 'or': 0, 'not': 0}
+
+NUMBER = 0
+KEYWORD = 1
+OPERATOR = 2
+ID = 3
+STRING = 4
+NEWLINE = 5
+
+def is_numeric(c):
+    return c >= '0' and c <= '9'
+
+def is_alpha(c):
+    # I'm including underscore as a letter
+    return (c >= 'A' and c <= 'Z') or\
+        (c >= 'a' and c <= 'z') or\
+        c == '_'
+
+def is_alphanumeric(c):
+    return (c >= 'A' and c <= 'Z') or\
+        (c >= 'a' and c <= 'z') or\
+        (c >= '0' and c <= '9') or\
+        c == '_'
+
+def is_special(c):
+    # Maybe I should use a hashmap or something, but whatever.
+    return c == '*' or c == '/' or\
+        c == '+' or c == '-' or\
+        c == '(' or c == ')' or\
+        c == '=' or c == ',' or\
+        c == '&' or c == '|' or\
+        c == '~' or c == '%' or\
+        c == ';' or c == ':' or\
+        c == '[' or c == ']' or\
+        c == '<' or c == '>' or\
+        c == '"' or c == '\''
+
+def tokenize(in_str):
+    """
+    Tokenize the given string, with some checks. The returned token list will be of
+    the format [(TYPE, VALUE), ...].
+    """
+
+    token_list = []
+    line_number = 1
+
+    if not in_str:
+        return token_list
+
+    length = len(in_str)
+
+    i = 0
+    while i < length:
+        if is_numeric(in_str[i]):
+            # It is a number, grab the entire number. NO floats allowed.
+            num = 0
+            while i < length and is_numeric(in_str[i]):
+                num = num * 10 + int(in_str[i])
+                i = i + 1
+
+            token_list.append((NUMBER, num))
+        
+        elif is_alpha(in_str[i]):
+            # Requires variables to start with a letter or underscore.
+            start_index = i
+            while i < length and is_alphanumeric(in_str[i]):
+                i = i + 1
+            
+            val = in_str[start_index:i]
+            if val in keywords:
+                token_list.append((KEYWORD, val))
+            elif val in multichar_ops:
+                token_list.append((OPERATOR, val))
+            else:
+                token_list.append((ID, val))
+
+        elif is_special(in_str[i]):
+
+            start_index = i
+            if in_str[i] == '"':
+                # Capture the entire string
+                i = i + 1
+                while i < length and in_str[i] != '"' and in_str[i] != '\n':
+                    # Screw escape characters
+                    i = i + 1
+                check(i < length and in_str != '\n', 'Incomplete string: {}" on line {}'
+                    .format(in_str[start_index:i], line_number))
+                token_list.append((STRING, in_str[start_index + 1:i]))
+                i = i + 1
+            elif in_str[i] == '\'':
+                i = i + 1
+                check(i < length and in_str[i] != '\n', 'Bad character formatting on line {}'
+                    .format(line_number))
+                i = i + 1
+                check(i < length and in_str[i] == '\'', 'Lone " \' " found on line {}'.
+                    format(line_number))
+                token_list.append((NUMBER, ord(in_str[i - 1])))
+                i = i + 1           
+            else:
+                c = in_str[i]
+                if (c == '<' or c == '>' or c == '=')\
+                    and i + 1 < length and in_str[i + 1] == '=':
+                    token_list.append((OPERATOR, in_str[i:i + 2]))
+                    i = i + 1
+                else:
+                    token_list.append((OPERATOR, c))
+                i = i + 1
+        else:
+            if in_str[i] == '\n':
+                token_list.append((NEWLINE, None))
+                line_number = line_number + 1
+            i = i + 1
+
+    return token_list
