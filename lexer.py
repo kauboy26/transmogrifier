@@ -1,3 +1,9 @@
+"""
+These functions help with lexical analysis. I've tried to do as much work
+as possible over here before stuff is passed over to the parser. The
+"tokenize" method will tokenize a string, for consumption by the parser.
+"""
+
 from miscell import check
 
 keywords = {'def': 0, 'if': 0, 'elif': 0,
