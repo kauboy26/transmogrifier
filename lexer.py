@@ -13,6 +13,7 @@ OPERATOR = 2
 ID = 3
 STRING = 4
 NEWLINE = 5
+COMMENT = 6
 
 def is_numeric(c):
     return c >= '0' and c <= '9'
@@ -40,7 +41,8 @@ def is_special(c):
         c == ';' or c == ':' or\
         c == '[' or c == ']' or\
         c == '<' or c == '>' or\
-        c == '"' or c == '\''
+        c == '"' or c == '\'' or\
+        c == '#'
 
 def tokenize(in_str):
     """
@@ -102,7 +104,17 @@ def tokenize(in_str):
                 check(i < length and in_str[i] == '\'', 'Lone " \' " found on line {}'.
                     format(line_number))
                 token_list.append((NUMBER, ord(in_str[i - 1])))
-                i = i + 1           
+                i = i + 1  
+            elif in_str[i] == '#':
+                # capture the entire comment, which ends at the new line character.
+                i = i + 1
+                start_index = i
+                while i < length and in_str[i] != '\n':
+                    i = i + 1
+                # Now pointing at either a newline or we've gone past.
+                if start_index != length:
+                    token_list.append((COMMENT, in_str[start_index:i]))
+                    # The thing will be left pointing to a newline char, which will be picked up later.         
             else:
                 c = in_str[i]
                 if (c == '<' or c == '>' or c == '=')\
