@@ -114,7 +114,8 @@ def parse(token_list=[]):
                     continue
 
             if value == NOT:
-                # Does this solve the double NOT problem? Maybe it'll come back to bite me.
+                # Does this solve the double NOT problem? Maybe it'll come back
+                # to bite me, see note 1.
                 op_stack.append(value)
                 op_stack_length = op_stack_length + 1
                 i = i + 1
