@@ -7,4 +7,4 @@ def check(bool, message):
     """
     if not bool:
         print(message)
-        # exit(1)
+        exit(1)

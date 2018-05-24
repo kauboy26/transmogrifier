@@ -10,6 +10,8 @@ STRING = 4
 NEWLINE = 5
 COMMENT = 6
 
+STACK_TOP = 8
+
 AND = 'and'
 OR = 'or'
 NOT = 'not'
@@ -69,9 +71,6 @@ def parse(token_list=[]):
 
     line_number = 1
 
-    i = 0
-    length = len(token_list)
-
     variables = {}
 
     op_stack = []
@@ -79,10 +78,13 @@ def parse(token_list=[]):
     args_count_stack = []
 
     ir_form = []
+    statement = []
 
     op_stack_length = 0
     num_stack_length = 0
 
+    i = 0
+    length = len(token_list)
     while i < len(token_list):
         tk_type, value = token_list[i]
 
@@ -125,39 +127,80 @@ def parse(token_list=[]):
                 operation = op_stack.pop()
                 op_stack_length = op_stack_length - 1
 
-                check(len(num_stack) >= args_needed[operation], 'Not enough args to operation {}. Needed '
-                    '{}, but found {}'.format(operation, args_needed[operation], num_stack_length))
+                check(len(num_stack) >= args_needed[operation], 'Not enough'
+                    'args to operation {}. Needed {}, but found {}'
+                    .format(operation, args_needed[operation], num_stack_length))
 
                 operands = [num_stack.pop() for i in range(args_needed[operation])]
                 num_stack_length = num_stack_length - args_needed[operation]
-                ir_form.append((operands, operation))
 
-                # TODO: variable existence
-                num_stack.append((ID, '$'))
+                # Ensure the required variables exist, or create variables in
+                # the case of an assignment statement.
+                if operation == EQUAL:
+                    check_operands_exist(operands[:-1], variables, line_number)
+                    c, v = operands[-1]
+                    check(c == ID, 'Cannot assign value to a literal. Line'
+                        ' number: {}'.format(line_number))
+                    if v not in variables:
+                        variables[v] = 0
+                else:
+                    check_operands_exist(operands, variables, line_number)
+
+                statement.append((operands, operation))
+
+                num_stack.append((STACK_TOP, '$'))
                 num_stack_length = num_stack_length + 1
 
             # At this point, either the operand stack is empty, or the top most
             # operand has a precedence lower than the newest operand.
             if value == RPAREN:
-                check(op_stack and op_stack[-1] == LPAREN, 'Mismatched parens')
+                check(op_stack and op_stack[-1] == LPAREN, 'Mismatched parens.'
+                    ' Line number: {}'.format(line_number))
                 op_stack.pop()
 
             elif value == COMMA:
-                check(args_count_stack, '"," must appear to separate function arguments.')
+                check(args_count_stack, '"," must appear to separate function'
+                    ' arguments. Line number: {}'.format(line_number))
                 args_count_stack[-1] = args_count_stack[-1] + 1
                 op_stack_length = 0
                 num_stack_length = 0
             elif value == SEMICOLON:
-                check(len(num_stack) == 1, 'Problem in statement')
-                num_stack.pop()
+                check(len(num_stack) <= 1, 'Error in statement. Hints: an oper'
+                    'ation has too many arguments, or semicolon could be'
+                    'missing. Line number: {}'.format(line_number))
+                # The num_stack has either 0 or 1 items in it. If it has 0 items
+                # then that means this was probably (must) an empty statement.
+                # Otherwise it means things went as usual. See note 2.
+                if num_stack:
+                    num_stack.pop()
+                    ir_form.append(statement)
+                statement = []
             else:
                 op_stack.append(value)
                 op_stack_length = op_stack_length + 1
             i = i + 1
-
+        elif tk_type == COMMENT:
+            # TODO need to put this into the ir so that comments are printed on
+            # to the generated code.
+            # print(value)
+            i = i + 1
         elif tk_type == NEWLINE:
             line_number = line_number + 1
             i = i + 1
 
-    check(not num_stack, 'Missing semicolon?')
+    # I think this may cause the user a lot of grief. A missing semicolon on one
+    # line may not get detected until much much later. Perhaps this message needs
+    # to be broadcast elsewhere.
+    check(not num_stack, 'Missing semicolon? Line number: {}'
+        .format(line_number))
+
     return ir_form
+
+
+def check_operands_exist(operands, variables, line_number):
+    # I realize that this is a bug source. The line number may not correctly
+    # reflect where the variable actually is if the statement spans multiple
+    # lines.
+    for c, v in operands:
+        check(c != ID or v in variables, 'The variable "{}" has not been'
+            ' defined. Line number: {}'.format(v, line_number))
