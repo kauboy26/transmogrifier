@@ -6,5 +6,4 @@ def check(bool, message):
     message - The message to print if bool is False
     """
     if not bool:
-        print(message)
-        exit(1)
+        raise SyntaxError(message)
