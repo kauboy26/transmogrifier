@@ -11,6 +11,10 @@ if __name__ == '__main__':
     with open(sys.argv[-1], 'r') as filename:
         content = filename.read()
         token_list = tokenize(content)
+
+        for token in token_list:
+            print(token)
+
         ir_form = parse(token_list)
 
         for statement in ir_form:

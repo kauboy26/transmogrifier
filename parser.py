@@ -128,6 +128,9 @@ def parse(token_list=[]):
                 operation = op_stack.pop()
                 op_stack_length = op_stack_length - 1
 
+                check(operation in args_needed, 'Error evaluating statement.'
+                    'Hints: Mismatched parens. See "{}". Line number: {}'
+                    .format(operation, line_number))
                 check(len(num_stack) >= args_needed[operation], 'Not enough'
                     'args to operation {}. Needed {}, but found {}'
                     .format(operation, args_needed[operation], num_stack_length))

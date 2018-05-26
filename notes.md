@@ -1,3 +1,4 @@
+# Notes
 ## Note 1
 The 'not' is quickly grabbed and added to the op_stack. This enforces right associativity
 and high precendence. I think quickly grabbing it is the only thing needed to enforce the
@@ -19,3 +20,7 @@ the statement that was executed was an empty statement, i.e, it was a ";". This 
 calls, etc) will all push a value on to num_stack. It is not possible to do anything without a value not being pushed on to the number stack. Therefore, in this code, we empty the num_stack when it is not empty (a single pop() will do), and append the statement generated to the overall form. Regardless, the statement is cleaned out for the next iteration.  
 The reasoning behind separating ir_form and statement was to avoid unnecessary pushes to the stack that may occur during the
 code generation phase. The last operation in each statement does not require a push to the stack.
+
+# Other issues
+
+* Tried to execute "a = (1 +;", instead of getting "not enough operands" or "missing paren" message, got the variable "a" is not defined. This is because the stack does not care about the actual positions of operands, and so in the popping process the "a" and "1" are popped to be added, but "a" obviously hasn't been defined yet.
