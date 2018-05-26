@@ -1,0 +1,43 @@
+# A program to check whether a given string is a palindrome.
+
+declare is_palindrome(str);
+declare str_len(s);
+
+main:
+    str = "malayalam";
+    if is_palindrome(str):
+        print("Yes, it is a palindrome.");
+    else:
+        print("No, it isn't a palindrome.");
+    end
+end
+
+def is_palindrome(s):
+    length = str_len(s);
+    i = 0;
+    j = length - 1;
+
+    while i < j and value_at(s + i) == value_at(s + j):
+        i = i + 1;
+        j = j + 1;
+    end
+
+    if i < j:
+        # It exited because the values were not equal
+        return 0;
+    end
+
+    return 1;
+end
+
+def str_len(str):
+    # determines the length of a string, excluding the last
+    # terminating null character. For example, the string
+    # "hello\0" has a length of 5.
+    i = 0;
+    while value_at(str + i):
+        i = i + 1;
+    end
+
+    return i;
+end
