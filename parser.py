@@ -52,6 +52,9 @@ RETURN = 'return'
 PRINT = 'print'
 INJECT = 'inject'
 
+# These are different, since they instruct the (IR) machine what to do.
+POP = 'pop'
+
 HIGHEST_PRECEDENCE = 500
 LOWEST_PRECEDENCE = 0
 
@@ -79,7 +82,6 @@ def parse(token_list=[]):
     args_count_stack = []
 
     ir_form = []
-    statement = []
 
     op_stack_length = 0
     num_stack_length = 0
@@ -150,7 +152,7 @@ def parse(token_list=[]):
                 else:
                     check_operands_exist(operands, variables, line_number)
 
-                statement.append((operands, operation))
+                ir_form.append((operands, operation))
 
                 num_stack.append((STACK_TOP, '$'))
                 num_stack_length = num_stack_length + 1
@@ -176,9 +178,12 @@ def parse(token_list=[]):
                 # then that means this was probably (must) an empty statement.
                 # Otherwise it means things went as usual. See note 2.
                 if num_stack:
-                    num_stack.pop()
-                    ir_form.append(statement)
-                statement = []
+                    c, v = num_stack.pop()
+                    if c == STACK_TOP:
+                        # Therefore something was pushed on to the stack as a
+                        # result of an operation. Otherwise a statement like
+                        # "4;" was encountered, and nothing needs to be done.
+                        ir_form.append((None, POP))
             else:
                 op_stack.append(value)
                 op_stack_length = op_stack_length + 1
