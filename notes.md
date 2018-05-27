@@ -21,7 +21,12 @@ calls, etc) will all push a value on to num_stack. It is not possible to do anyt
 The reasoning behind separating ir_form and statement was to avoid unnecessary pushes to the stack that may occur during the
 code generation phase. The last operation in each statement does not require a push to the stack.
 
+## Note 3
+The assignment operation and creating variables together are screwing the stack up. A single assignment operation per statement is
+now being enforced.
+
 # Other issues
 
 * Tried to execute "a = (1 +;", instead of getting "not enough operands" or "missing paren" message, got the variable "a" is not defined. This is because the stack does not care about the actual positions of operands, and so in the popping process the "a" and "1" are popped to be added, but "a" obviously hasn't been defined yet.
 * TODO solve newline problem (newlines are encounterd in func decl.). Right now I expect a linear deterministic format.
+* Two assignment operations in one statement, where both assignments require the creation of a variable should be made illegal. I am having problems resolving what the stack should look like then. EDIT: I have done something to somewhat fix that. However, the compiler still lets this go through: "1 * 8 + (b = 10);". This will break it.

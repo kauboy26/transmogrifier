@@ -53,7 +53,8 @@ PRINT = 'print'
 INJECT = 'inject'
 
 # These are different, since they instruct the (IR) machine what to do.
-POP = 'pop'
+CREATE = '__create__'
+POP = '__pop__'
 
 HIGHEST_PRECEDENCE = 500
 LOWEST_PRECEDENCE = 0
@@ -80,6 +81,7 @@ def parse(token_list=[]):
 
     functions = {}
     variables = {}
+    created_vars = 0 # Counts the number of variables created in a single statement.
 
     op_stack = []
     num_stack = []
@@ -104,7 +106,9 @@ def parse(token_list=[]):
             num_stack_length = num_stack_length + 1
             i = i + 1
         elif tk_type == KEYWORD:
-            if value == DECLARE:
+            if value == MAIN:
+                pass
+            elif value == DECLARE:
                 # Process the entire declare here.
                 func_name, args_count, i, line_number\
                     = process_declare(token_list, i, functions, line_number)
@@ -166,10 +170,15 @@ def parse(token_list=[]):
                 # the case of an assignment statement.
                 if operation == EQUAL:
                     check_operands_exist(operands[:-1], variables, line_number)
+                    check(not op_stack, 'Illegal statement. Line number: {}'
+                        .format(line_number)) # See note 3
                     c, v = operands[-1]
                     check(c == ID, 'Cannot assign value to a literal. Line'
                         ' number: {}'.format(line_number))
                     if v not in variables:
+                        # Create the variable
+                        ir_form.append((operands[-1], CREATE))
+                        created_vars = created_vars + 1
                         variables[v] = 0
                 else:
                     check_operands_exist(operands, variables, line_number)
@@ -196,6 +205,14 @@ def parse(token_list=[]):
                 check(len(num_stack) <= 1, 'Error in statement. Hints: an oper'
                     'ation has too many arguments, or semicolon could be'
                     'missing. Line number: {}'.format(line_number))
+                check(created_vars <= 1, 'Cannot create more than one variable '
+                    'in a single statement. Ensure that at most one variable is'
+                    ' not defined. Line number: {}'.format(line_number)) # note 3
+                check(not op_stack, 'Illegal statement. Line number: {}'
+                    .format(line_number))
+                created_vars = 0
+                num_stack_length = 0 # Cause of so much grief! TODO PUT THIS IN COLON too
+                op_stack_length = 0
                 # The num_stack has either 0 or 1 items in it. If it has 0 items
                 # then that means this was probably (must) an empty statement.
                 # Otherwise it means things went as usual. See note 2.
@@ -209,6 +226,7 @@ def parse(token_list=[]):
             else:
                 op_stack.append(value)
                 op_stack_length = op_stack_length + 1
+
             i = i + 1
         elif tk_type == COMMENT:
             # TODO need to put this into the ir so that comments are printed on
