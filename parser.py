@@ -68,11 +68,16 @@ def parse(token_list=[]):
     precedence = {MULTI: 150, DIVIS: 150, MODULO: 150, PLUS: 130, MINUS: 130,
                     NOT: 110, AND: 100, OR: 99, LTHAN: 120, GTHAN:120, LTHANEQ: 120,
                     GTHANEQ: 120, DOUBLE_EQ: 120, EQUAL: 80, COMMA: 70, SEMICOLON: 70,
-                    LPAREN: 0, RPAREN: 1}
+                    LPAREN: 0, RPAREN: 1,
+                    # functions:
+                    VALUE_AT: 200, ADDRESS_OF: 200, BLOCK: 200, PRINT: 200, INJECT: 200}
+
 
     args_needed = {MULTI: 2, DIVIS: 2, MODULO: 2, PLUS: 2, MINUS: 2, NOT: 1,
                     AND: 2, OR: 2, LTHAN: 2, GTHAN: 2, GTHANEQ: 2, LTHANEQ: 2,
-                    DOUBLE_EQ: 2, EQUAL: 2}
+                    DOUBLE_EQ: 2, EQUAL: 2,
+                    VALUE_AT: 1, ADDRESS_OF: 1,
+                    BLOCK: 1, PRINT: 1, INJECT: 1}
 
     primitive_functions = {VALUE_AT: 0, ADDRESS_OF: 0, BLOCK: 0, PRINT: 0,
                             INJECT: 0}
@@ -102,6 +107,9 @@ def parse(token_list=[]):
             num_stack_length = num_stack_length + 1
             i = i + 1
         elif tk_type == ID:
+            if value in functions:
+                token_list[i] = (OPERATOR, value)
+                continue
             num_stack.append((ID, value))
             num_stack_length = num_stack_length + 1
             i = i + 1
@@ -113,6 +121,8 @@ def parse(token_list=[]):
                 func_name, args_count, i, line_number\
                     = process_declare(token_list, i, functions, line_number)
                 functions[func_name] = args_count
+                precedence[func_name] = 200
+                args_needed[func_name] = args_count
             elif value == DEF:
                 pass
             elif value == IF:
@@ -134,7 +144,11 @@ def parse(token_list=[]):
                 i = i + 1
                 continue
 
+            if value in functions:
+                args_count_stack.append(0)
+
             if (value == PLUS or value == MINUS) and (op_stack_length == num_stack_length):
+                print('called')
                 if value == MINUS:
                     num_stack.append((NUMBER, -1))
                     num_stack_length = num_stack_length + 1
@@ -159,9 +173,19 @@ def parse(token_list=[]):
                 check(operation in args_needed, 'Error evaluating statement. '
                     'Hints: Mismatched parens. See "{}". Line number: {}'
                     .format(operation, line_number))
-                check(len(num_stack) >= args_needed[operation], 'Not enough '
-                    'args to operation {}. Needed {}, but found {}'
-                    .format(operation, args_needed[operation], num_stack_length))
+                check(len(num_stack) >= args_needed[operation], 'Incorrect args'
+                    ' to operation (or function) "{}". Needed {}, but found {}.'
+                    ' Line number: {}'
+                    .format(operation, args_needed[operation],
+                        num_stack_length, line_number))
+                if value in functions:
+                    args_found = args_count_stack.pop()
+                    args_req = args_needed[value]
+                    check((args_req <= 1 and args_found == 0)\
+                        or args_req == args_found + 1, 'Not enough args found '
+                        'to function {}. Needed {}, but found {}. Line number: '
+                        '{}'
+                        .format(value, args_req, args_found + 1, line_number))
 
                 operands = [num_stack.pop() for i in range(args_needed[operation])]
                 num_stack_length = num_stack_length - args_needed[operation]
@@ -177,13 +201,14 @@ def parse(token_list=[]):
                         ' number: {}'.format(line_number))
                     if v not in variables:
                         # Create the variable
-                        ir_form.append((operands[-1], CREATE))
+                        ir_form.append(([operands[-1]], CREATE))
                         created_vars = created_vars + 1
                         variables[v] = 0
                 else:
                     check_operands_exist(operands, variables, line_number)
 
                 ir_form.append((operands, operation))
+                print(ir_form)
 
                 num_stack.append((STACK_TOP, '$'))
                 num_stack_length = num_stack_length + 1
@@ -203,7 +228,7 @@ def parse(token_list=[]):
                 num_stack_length = 0
             elif value == SEMICOLON:
                 check(len(num_stack) <= 1, 'Error in statement. Hints: an oper'
-                    'ation has too many arguments, or semicolon could be'
+                    'ation has too many arguments, or semicolon could be '
                     'missing. Line number: {}'.format(line_number))
                 check(created_vars <= 1, 'Cannot create more than one variable '
                     'in a single statement. Ensure that at most one variable is'
@@ -310,5 +335,4 @@ def process_declare(token_list, i, functions, line_number):
     check(v == SEMICOLON, 'Malformed function declaration. Line number: {}'.format(line_number))
 
     i = i + 1
-    print(func_name, args_count)
     return func_name, args_count, i, line_number
