@@ -156,10 +156,10 @@ def parse(token_list=[]):
                 operation = op_stack.pop()
                 op_stack_length = op_stack_length - 1
 
-                check(operation in args_needed, 'Error evaluating statement.'
+                check(operation in args_needed, 'Error evaluating statement. '
                     'Hints: Mismatched parens. See "{}". Line number: {}'
                     .format(operation, line_number))
-                check(len(num_stack) >= args_needed[operation], 'Not enough'
+                check(len(num_stack) >= args_needed[operation], 'Not enough '
                     'args to operation {}. Needed {}, but found {}'
                     .format(operation, args_needed[operation], num_stack_length))
 
@@ -281,6 +281,7 @@ def process_declare(token_list, i, functions, line_number):
     i = i + 1
     
     args_count = 0
+    comma_count = 0
 
     c, v = token_list[i]
 
@@ -294,8 +295,11 @@ def process_declare(token_list, i, functions, line_number):
             c, v = token_list[i]
             if v == COMMA:
                 i = i + 1
+                comma_count = comma_count + 1
             elif v == RPAREN:
                 break
+        check(comma_count == args_count - 1, 'Commas must separate arguments.'
+            'Line number: {}'.format(line_number))
 
     # We have the correct number of arguments, and we should be pointing at
     # a right paren.
@@ -306,4 +310,5 @@ def process_declare(token_list, i, functions, line_number):
     check(v == SEMICOLON, 'Malformed function declaration. Line number: {}'.format(line_number))
 
     i = i + 1
+    print(func_name, args_count)
     return func_name, args_count, i, line_number
