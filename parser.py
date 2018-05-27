@@ -73,8 +73,12 @@ def parse(token_list=[]):
                     AND: 2, OR: 2, LTHAN: 2, GTHAN: 2, GTHANEQ: 2, LTHANEQ: 2,
                     DOUBLE_EQ: 2, EQUAL: 2}
 
+    primitive_functions = {VALUE_AT: 0, ADDRESS_OF: 0, BLOCK: 0, PRINT: 0,
+                            INJECT: 0}
+
     line_number = 1
 
+    functions = {}
     variables = {}
 
     op_stack = []
@@ -99,6 +103,24 @@ def parse(token_list=[]):
             num_stack.append((ID, value))
             num_stack_length = num_stack_length + 1
             i = i + 1
+        elif tk_type == KEYWORD:
+            if value == DECLARE:
+                # Process the entire declare here.
+                func_name, args_count, i, line_number\
+                    = process_declare(token_list, i, functions, line_number)
+                functions[func_name] = args_count
+            elif value == DEF:
+                pass
+            elif value == IF:
+                pass
+            elif value == ELIF:
+                pass
+            elif value == ELSE:
+                pass
+            elif value == WHILE:
+                pass
+            elif value == END:
+                pass
         elif tk_type == OPERATOR:
 
             if value == LPAREN:
@@ -213,3 +235,57 @@ def check_operands_exist(operands, variables, line_number):
     for c, v in operands:
         check(c != ID or v in variables, 'The variable "{}" has not been'
             ' defined. Line number: {}'.format(v, line_number))
+
+
+def process_declare(token_list, i, functions, line_number):
+    """
+    Process the entire declare, until the ":".
+    token_list is the same token_list being used,
+    i is the current position of the counter (should point to the DECLARE)
+    """
+    # At any point, if we hit the end of the token_list stream, the compiler
+    # will crash. But there is little that can be done about that.
+
+    i = i + 1 # Pass the DECLARE
+
+    c, v = token_list[i]
+
+    check(c == ID, 'The name {} is reserved or illegal. Line number: {}.'
+        .format(v, line_number))
+    check(v not in functions, 'The name {} has been used to declare a function.'
+        ' Please use another name. Line number: {}'.format(v, line_number))
+
+    func_name = v
+    i = i + 1
+
+    c, v = token_list[i]
+    check(v == LPAREN, 'Expected "(" here. Got {}. Line number: {}'.format(v, line_number))
+    i = i + 1
+    
+    args_count = 0
+
+    c, v = token_list[i]
+
+    if (v != RPAREN):
+        # There is at least one argument.
+        while True:
+            c, v = token_list[i]
+            check(c == ID, 'Malformed function declaration. Line number: {}'.format(c, line_number))
+            args_count = args_count + 1
+            i = i + 1
+            c, v = token_list[i]
+            if v == COMMA:
+                i = i + 1
+            elif v == RPAREN:
+                break
+
+    # We have the correct number of arguments, and we should be pointing at
+    # a right paren.
+
+    i = i + 1 # pass right paren
+
+    c, v = token_list[i]
+    check(v == SEMICOLON, 'Malformed function declaration. Line number: {}'.format(line_number))
+
+    i = i + 1
+    return func_name, args_count, i, line_number
