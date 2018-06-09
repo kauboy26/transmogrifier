@@ -1,4 +1,4 @@
-def check(bool, message):
+def check(bool, message, line_number):
     """
     Kind of like assert. If bool evaluates to False,
     it prints the message and terminates the python program.
@@ -6,4 +6,4 @@ def check(bool, message):
     message - The message to print if bool is False
     """
     if not bool:
-        raise SyntaxError(message)
+        raise SyntaxError(message + ' Line number: {}'.format(line_number))

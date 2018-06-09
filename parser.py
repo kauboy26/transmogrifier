@@ -60,7 +60,7 @@ HIGHEST_PRECEDENCE = 500
 LOWEST_PRECEDENCE = 0
 
 def parse(token_list=[]):
-    check(token_list, 'The compiler that one not working guru')
+    check(token_list, 'The compiler that one not working guru.', -1)
 
     # For now just do some crap testing
     # Not too sure of some of these, such as comma vs semicolon. As far as I can
@@ -82,20 +82,25 @@ def parse(token_list=[]):
     primitive_functions = {VALUE_AT: 0, ADDRESS_OF: 0, BLOCK: 0, PRINT: 0,
                             INJECT: 0}
 
+    effect_of = {MULTI: -1, DIVIS: -1, MODULO: -1, PLUS: -1, MINUS: -1, NOT: 0,
+                    AND: -1, OR: -1, LTHAN: -1, GTHAN: -1, GTHANEQ: -1, LTHANEQ: -1,
+                    DOUBLE_EQ: -1, EQUAL: -1, VALUE_AT: 0, ADDRESS_OF: 0,
+                    BLOCK: 0, PRINT: 0, INJECT: 0}
+
     line_number = 1
 
     functions = {}
     variables = {}
+
     created_vars = 0 # Counts the number of variables created in a single statement.
 
     op_stack = []
     num_stack = []
     args_count_stack = []
+    effect = [0]
 
     ir_form = []
 
-    op_stack_length = 0
-    num_stack_length = 0
 
     i = 0
     length = len(token_list)
@@ -104,14 +109,14 @@ def parse(token_list=[]):
 
         if tk_type == NUMBER:
             num_stack.append((NUMBER, value))
-            num_stack_length = num_stack_length + 1
+            effect[-1] += 1
             i = i + 1
         elif tk_type == ID:
             if value in functions:
                 token_list[i] = (OPERATOR, value)
                 continue
             num_stack.append((ID, value))
-            num_stack_length = num_stack_length + 1
+            effect[-1] += 1
             i = i + 1
         elif tk_type == KEYWORD:
             if value == MAIN:
@@ -139,66 +144,55 @@ def parse(token_list=[]):
 
             if value == LPAREN:
                 op_stack.append(value)
-                op_stack_length = 0
-                num_stack_length = 0
+                effect.append(0)
                 i = i + 1
                 continue
 
             if value in functions:
                 args_count_stack.append(0)
 
-            if (value == PLUS or value == MINUS) and (op_stack_length == num_stack_length):
-                print('called')
+            if (value == PLUS or value == MINUS) and effect[-1] == 0:
                 if value == MINUS:
                     num_stack.append((NUMBER, -1))
-                    num_stack_length = num_stack_length + 1
-                    value = '*'
+                    effect[-1] += 1
+                    value = MULTI
                 else: # value == PLUS
                     # Skip this iteration. Basically fuck the extra plus sign.
                     i = i + 1
                     continue
 
             if value == NOT:
-                # Does this solve the double NOT problem? Maybe it'll come back
-                # to bite me, see note 1.
+                # see note 1.
                 op_stack.append(value)
-                op_stack_length = op_stack_length + 1
+                # effect[-1] += effect_of[NOT] -- Does nothing
                 i = i + 1
                 continue
 
             while op_stack and precedence[value] <= precedence[op_stack[-1]]:
+
                 operation = op_stack.pop()
-                op_stack_length = op_stack_length - 1
 
                 check(operation in args_needed, 'Error evaluating statement. '
-                    'Hints: Mismatched parens. See "{}". Line number: {}'
-                    .format(operation, line_number))
-                check(len(num_stack) >= args_needed[operation], 'Incorrect args'
-                    ' to operation (or function) "{}". Needed {}, but found {}.'
-                    ' Line number: {}'
-                    .format(operation, args_needed[operation],
-                        num_stack_length, line_number))
+                    'Hints: Mismatched parens. See "{}".'
+                    .format(operation), line_number)
+
                 if value in functions:
                     args_found = args_count_stack.pop()
                     args_req = args_needed[value]
                     check((args_req <= 1 and args_found == 0)\
                         or args_req == args_found + 1, 'Not enough args found '
-                        'to function {}. Needed {}, but found {}. Line number: '
-                        '{}'
-                        .format(value, args_req, args_found + 1, line_number))
+                        'to function {}. Needed {}, but found {}.'
+                        .format(value, args_req, args_found + 1), line_number)
 
                 operands = [num_stack.pop() for i in range(args_needed[operation])]
-                num_stack_length = num_stack_length - args_needed[operation]
 
                 # Ensure the required variables exist, or create variables in
                 # the case of an assignment statement.
                 if operation == EQUAL:
                     check_operands_exist(operands[:-1], variables, line_number)
-                    check(not op_stack, 'Illegal statement. Line number: {}'
-                        .format(line_number)) # See note 3
+                    check(not op_stack, 'Illegal statement.', line_number) # See note 3
                     c, v = operands[-1]
-                    check(c == ID, 'Cannot assign value to a literal. Line'
-                        ' number: {}'.format(line_number))
+                    check(c == ID, 'Cannot assign value to a literal.', line_number)
                     if v not in variables:
                         # Create the variable
                         ir_form.append(([operands[-1]], CREATE))
@@ -208,36 +202,43 @@ def parse(token_list=[]):
                     check_operands_exist(operands, variables, line_number)
 
                 ir_form.append((operands, operation))
-                print(ir_form)
 
                 num_stack.append((STACK_TOP, '$'))
-                num_stack_length = num_stack_length + 1
 
             # At this point, either the operand stack is empty, or the top most
             # operand has a precedence lower than the newest operand.
             if value == RPAREN:
-                check(op_stack and op_stack[-1] == LPAREN, 'Mismatched parens.'
-                    ' Line number: {}'.format(line_number))
+                check(op_stack and op_stack[-1] == LPAREN, 'Mismatched parens.',
+                    line_number)
+                check(effect[-1] == 0 or effect[-1] == 1, #TODO
+                    'Bad expr within parens.', line_number)
                 op_stack.pop()
+                effect[-2] += effect[-1]
+                effect.pop()
 
             elif value == COMMA:
                 check(args_count_stack, '"," must appear to separate function'
-                    ' arguments. Line number: {}'.format(line_number))
+                    ' arguments.', line_number)
                 args_count_stack[-1] = args_count_stack[-1] + 1
-                op_stack_length = 0
-                num_stack_length = 0
+
+                check(effect[-1] == 1, 'Comma-related syntax error.', line_number)
+                effect[-2] += 1
+                effect[-1] = 0
+
             elif value == SEMICOLON:
-                check(len(num_stack) <= 1, 'Error in statement. Hints: an oper'
-                    'ation has too many arguments, or semicolon could be '
-                    'missing. Line number: {}'.format(line_number))
+                check(not op_stack, 'Illegal statement.', line_number)
+                check(len(num_stack) <= 1 and len(effect) == 1 and effect[-1] <= 1,
+                    'Error in statement. Hints: an operation has too many arguments,'
+                    ' or semicolon could be missing.',
+                    line_number)
                 check(created_vars <= 1, 'Cannot create more than one variable '
                     'in a single statement. Ensure that at most one variable is'
-                    ' not defined. Line number: {}'.format(line_number)) # note 3
-                check(not op_stack, 'Illegal statement. Line number: {}'
-                    .format(line_number))
+                    ' not defined.', line_number) # note 3
+                
+
                 created_vars = 0
-                num_stack_length = 0 # Cause of so much grief! TODO PUT THIS IN COLON too
-                op_stack_length = 0
+                effect[-1] = 0
+
                 # The num_stack has either 0 or 1 items in it. If it has 0 items
                 # then that means this was probably (must) an empty statement.
                 # Otherwise it means things went as usual. See note 2.
@@ -250,7 +251,8 @@ def parse(token_list=[]):
                         ir_form.append((None, POP))
             else:
                 op_stack.append(value)
-                op_stack_length = op_stack_length + 1
+                effect[-1] += effect_of[value]
+                check(effect[-1] >= 0, 'Too few operands.', line_number)
 
             i = i + 1
         elif tk_type == COMMENT:
@@ -265,8 +267,7 @@ def parse(token_list=[]):
     # I think this may cause the user a lot of grief. A missing semicolon on one
     # line may not get detected until much much later. Perhaps this message needs
     # to be broadcast elsewhere.
-    check(not num_stack, 'Missing semicolon? Line number: {}'
-        .format(line_number))
+    check(not num_stack, 'Missing semicolon?', line_number)
 
     return ir_form
 
@@ -277,7 +278,7 @@ def check_operands_exist(operands, variables, line_number):
     # lines.
     for c, v in operands:
         check(c != ID or v in variables, 'The variable "{}" has not been'
-            ' defined. Line number: {}'.format(v, line_number))
+            ' defined'.format(v), line_number)
 
 
 def process_declare(token_list, i, functions, line_number):
@@ -293,16 +294,16 @@ def process_declare(token_list, i, functions, line_number):
 
     c, v = token_list[i]
 
-    check(c == ID, 'The name {} is reserved or illegal. Line number: {}.'
-        .format(v, line_number))
+    check(c == ID, 'The name {} is reserved or illegal.'.format(v), line_number)
     check(v not in functions, 'The name {} has been used to declare a function.'
-        ' Please use another name. Line number: {}'.format(v, line_number))
+        ' Please use another name.'.format(v), line_number)
 
     func_name = v
     i = i + 1
 
     c, v = token_list[i]
-    check(v == LPAREN, 'Expected "(" here. Got {}. Line number: {}'.format(v, line_number))
+    check(v == LPAREN, 'Expected "(" here. Got {}.'.format(v),
+        line_number)
     i = i + 1
     
     args_count = 0
@@ -314,7 +315,8 @@ def process_declare(token_list, i, functions, line_number):
         # There is at least one argument.
         while True:
             c, v = token_list[i]
-            check(c == ID, 'Malformed function declaration. Line number: {}'.format(c, line_number))
+            check(c == ID, 'Malformed function declaration.'.format(c),
+                line_number)
             args_count = args_count + 1
             i = i + 1
             c, v = token_list[i]
@@ -323,8 +325,8 @@ def process_declare(token_list, i, functions, line_number):
                 comma_count = comma_count + 1
             elif v == RPAREN:
                 break
-        check(comma_count == args_count - 1, 'Commas must separate arguments.'
-            'Line number: {}'.format(line_number))
+        check(comma_count == args_count - 1, 'Commas must separate arguments.',
+            line_number)
 
     # We have the correct number of arguments, and we should be pointing at
     # a right paren.
@@ -332,7 +334,7 @@ def process_declare(token_list, i, functions, line_number):
     i = i + 1 # pass right paren
 
     c, v = token_list[i]
-    check(v == SEMICOLON, 'Malformed function declaration. Line number: {}'.format(line_number))
+    check(v == SEMICOLON, 'Malformed function declaration.', line_number)
 
     i = i + 1
     return func_name, args_count, i, line_number
