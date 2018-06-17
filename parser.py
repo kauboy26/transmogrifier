@@ -148,6 +148,8 @@ def parse(token_list=[]):
             effect[-1] += 1
             i = i + 1
         elif tk_type == KEYWORD:
+            check(not op_stack and not num_stack,
+                'Syntax error. Hint: missing semicolon?', line_number)
             if value == MAIN:
                 check(not main_found, 'Main method can be declared only once.', line_number)
                 check(not proc_func, 'Bad syntax: the word "main" is reserved.', line_number)
@@ -191,7 +193,7 @@ def parse(token_list=[]):
                 curr_scope_type.append(IF)
                 i = i + 1
             elif value == ELIF:
-                check(not proc_cond_header, 'Syntax error with "if".', line_number)
+                check(not proc_cond_header, 'Syntax error with "elif".', line_number)
                 proc_cond_header = True
                 check(curr_scope_type and\
                     (curr_scope_type[-1] == IF or curr_scope_type[-1] == ELIF),
@@ -221,7 +223,37 @@ def parse(token_list=[]):
                 i = i + 1
 
             elif value == ELSE:
-                pass
+                check(not proc_cond_header, 'Syntax error with "else".', line_number)
+                check(curr_scope_type and\
+                    (curr_scope_type[-1] == IF or curr_scope_type[-1] == ELIF),
+                    'Illegal use of "else".', line_number)
+                
+                # TODO make sure ":" was encountered here
+
+                curr_scope = curr_scope_type.pop()
+                curr_scope_type.append(ELSE)
+
+                lbl, end_lbl = cond_lbls.pop()
+
+                if curr_scope == IF:
+                    end_lbl = 'END_{}'.format(lbl)
+
+                ir_form.append((end_lbl, BRANCH))
+
+                labels[lbl] = len(ir_form)
+                ln_to_label[len(ir_form)] = lbl
+                
+                cond_lbls.append((lbl, end_lbl))
+
+                vars_to_remove = vars_this_block.pop()
+                remove_variables(vars_to_remove, variables)
+
+                if vars_to_remove:
+                    ir_form.append((vars_to_remove, DESTROY_VARS))
+
+                vars_this_block.append([])
+
+                i = i + 1
             elif value == WHILE:
                 pass
             elif value == END:
@@ -252,9 +284,17 @@ def parse(token_list=[]):
                     if vars_to_remove:
                         ir_form.append((vars_to_remove, DESTROY_VARS))
 
-                    labels[lbl] = len(ir_form) # Not 8
+                    labels[lbl] = len(ir_form) # Note 8
                     labels[end_lbl] = len(ir_form)
                     ln_to_label[len(ir_form)] = end_lbl
+                if scope_type == ELSE:
+                    lbl, end_lbl = cond_lbls.pop()
+
+                    if vars_to_remove:
+                        ir_form.append((vars_to_remove, DESTROY_VARS))
+
+                    labels[end_lbl] = len(ir_form)
+                    ln_to_label[len(ir_form)] = end_lbl # TODO POSSIBLE BUG FROM LABEL CLASH (empty else)?
 
                 i = i + 1
             elif value == RETURN:
