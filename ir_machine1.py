@@ -61,12 +61,17 @@ JROUTINE = '__jump_to_routine___'
 JUMP = '__jump__'
 R_TOCALLER = '__return_to_caller__'
 FETCH_RV = '__fetch_return_value__'
+LOAD_CC = '__load_cc__'
+COND_BRANCH = '__cond_branch__'
+BRANCH = '__branch__'
+SETUP_MAIN = '__setup_main__'
 
 class IRMachine1():
     def __init__(self):
         self.var_loc = {}
         self.memory = [randint(0, 2 ** 16) for i in range(1000)]
         self.sp = -1
+        self.fp = randint(0, 1000)
         self.pc = 0
 
         pass

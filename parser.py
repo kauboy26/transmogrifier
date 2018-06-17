@@ -69,6 +69,7 @@ FETCH_RV = '__fetch_return_value__'
 LOAD_CC = '__load_cc__'
 COND_BRANCH = '__cond_branch__'
 BRANCH = '__branch__'
+SETUP_MAIN = '__setup_main__'
 
 HIGHEST_PRECEDENCE = 500
 LOWEST_PRECEDENCE = 0
@@ -158,6 +159,8 @@ def parse(token_list=[]):
                 i, line_number = process_main_header(token_list, i, line_number)
                 vars_this_block.append([])
                 curr_scope_type.append(MAIN)
+
+                ir_form.append((None, SETUP_MAIN))
             elif value == DECLARE:
                 # Process the entire declare here.
                 func_name, args_count, i, line_number\
@@ -265,6 +268,9 @@ def parse(token_list=[]):
                 remove_variables(vars_to_remove, variables)
 
                 if scope_type == MAIN:
+                    if vars_to_remove:
+                        ir_form.append((vars_to_remove, DESTROY_VARS))
+                        
                     ir_form.append((None, HALT))
                     proc_func = False
                 if scope_type == DEF:
@@ -455,7 +461,7 @@ def parse(token_list=[]):
     # I think this may cause the user a lot of grief. A missing semicolon on one
     # line may not get detected until much much later. Perhaps this message needs
     # to be broadcast elsewhere.
-    check(not num_stack, 'Missing semicolon?', line_number)
+    check(not op_stack and not num_stack, 'Missing semicolon?', line_number)
 
     return ir_form, labels, ln_to_label
 
