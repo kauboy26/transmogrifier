@@ -236,17 +236,21 @@ def parse(token_list=[]):
                 # Ensure the required variables exist, or create variables in
                 # the case of an assignment statement.
                 if operation == EQUAL:
+                    check(proc_func, 'Statements must appear inside funcs', line_number) # TODO
                     check_operands_exist(operands[:-1], variables, line_number)
                     check(not op_stack, 'Illegal statement.', line_number) # See note 3
                     c, v = operands[-1]
                     check(c == ID, 'Cannot assign value to a literal.', line_number)
                     if v not in variables:
                         # Create the variable
-                        ir_form.append(([operands[-1]], CREATE))
-                        check(proc_func, 'Statements must appear inside funcs', line_number) # TODO
+                        ir_form.append((operands, CREATE))
                         vars_this_block[-1].append(v)
                         created_vars = created_vars + 1
                         variables[v] = 0
+                        continue
+                    ir_form.append((operands, operation))
+                    num_stack.append(operands[0])
+                    continue
                 else:
                     check_operands_exist(operands, variables, line_number)
 
