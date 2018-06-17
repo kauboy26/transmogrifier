@@ -1,3 +1,5 @@
+from random import randint
+
 from miscell import check
 
 # I will use these constants to save myself some trouble in
@@ -64,6 +66,9 @@ JROUTINE = '__jump_to_routine___'
 JUMP = '__jump__'
 R_TOCALLER = '__return_to_caller__'
 FETCH_RV = '__fetch_return_value__'
+LOAD_CC = '__load_cc__'
+COND_BRANCH = '__cond_branch__'
+BRANCH = '__branch__'
 
 HIGHEST_PRECEDENCE = 500
 LOWEST_PRECEDENCE = 0
@@ -77,6 +82,7 @@ def parse(token_list=[]):
     precedence = {MULTI: 150, DIVIS: 150, MODULO: 150, PLUS: 130, MINUS: 130,
                     NOT: 110, AND: 100, OR: 99, LTHAN: 120, GTHAN:120, LTHANEQ: 120,
                     GTHANEQ: 120, DOUBLE_EQ: 120, EQUAL: 80, COMMA: 70, SEMICOLON: 70,
+                    COLON: 70,
                     LPAREN: 0, RPAREN: 1,
                     # functions:
                     VALUE_AT: 200, ADDRESS_OF: 200, BLOCK: 200, PRINT: 200, INJECT: 200}
@@ -98,6 +104,7 @@ def parse(token_list=[]):
 
     line_number = 1
     labels = {}
+    n_lbl = 0
     ln_to_label = {}
 
     functions = {}
@@ -107,6 +114,9 @@ def parse(token_list=[]):
     variables = {}
     vars_this_block = []
     curr_scope_type = []
+
+    cond_lbls = [] # A stack to hold the control flow labels (for if, elif, etc)
+    proc_cond_header = False
 
     created_vars = 0 # Counts the number of variables created in a single statement.
     main_found = False
@@ -160,11 +170,11 @@ def parse(token_list=[]):
                 func_name, param_list, i, line_number\
                     = process_define(token_list, i, functions, defined_funcs,
                         line_number)
-                print('param list:', param_list)
                 ir_form.append((param_list, SETUP_FUNC))
 
-                labels[func_name] = len(ir_form)
-                ln_to_label[len(ir_form)] = func_name
+                labels[func_name] = len(ir_form) - 1
+                ln_to_label[len(ir_form) - 1] = func_name
+                n_lbl += 1
 
                 vars_this_block.append(param_list[:])
                 curr_scope_type.append(DEF)
@@ -173,9 +183,43 @@ def parse(token_list=[]):
                     variables[param] = 0
 
             elif value == IF:
-                pass
+                check(not proc_cond_header, 'Syntax error with "if".', line_number)
+                proc_cond_header = True
+                cond_lbls.append((generate_label(n_lbl, line_number), None))
+                n_lbl += 1
+                vars_this_block.append([])
+                curr_scope_type.append(IF)
+                i = i + 1
             elif value == ELIF:
-                pass
+                check(not proc_cond_header, 'Syntax error with "if".', line_number)
+                proc_cond_header = True
+                check(curr_scope_type and\
+                    (curr_scope_type[-1] == IF or curr_scope_type[-1] == ELIF),
+                    'Illegal use of "elif".', line_number)
+                
+                curr_scope_type.pop()
+                curr_scope_type.append(ELIF)
+
+                lbl, end_lbl = cond_lbls.pop()
+                end_lbl = end_lbl if end_lbl else 'END_{}'.format(lbl)
+
+                ir_form.append((end_lbl, BRANCH))
+
+                labels[lbl] = len(ir_form)
+                ln_to_label[len(ir_form)] = lbl
+
+                n_lbl += 1
+                cond_lbls.append((generate_label(n_lbl, line_number), end_lbl))
+
+                vars_to_remove = vars_this_block.pop()
+                remove_variables(vars_to_remove, variables)
+
+                if vars_to_remove:
+                    ir_form.append((vars_to_remove, DESTROY_VARS))
+
+                vars_this_block.append([])
+                i = i + 1
+
             elif value == ELSE:
                 pass
             elif value == WHILE:
@@ -194,6 +238,24 @@ def parse(token_list=[]):
                 if scope_type == DEF:
                     ir_form.append((None, R_TOCALLER))
                     proc_func = False
+                if scope_type == IF:
+                    lbl, end_lbl = cond_lbls.pop()
+
+                    if vars_to_remove:
+                        ir_form.append((vars_to_remove, DESTROY_VARS))
+                    labels[lbl] = len(ir_form)
+                    ln_to_label[len(ir_form)] = lbl
+
+                if scope_type == ELIF:
+                    lbl, end_lbl = cond_lbls.pop()
+
+                    if vars_to_remove:
+                        ir_form.append((vars_to_remove, DESTROY_VARS))
+
+                    labels[lbl] = len(ir_form)
+                    labels[end_lbl] = len(ir_form)
+                    ln_to_label[len(ir_form)] = end_lbl
+
                 i = i + 1
             elif value == RETURN:
                 check(not ret_statement, 'Illegal use of "return" keyword', line_number)
@@ -324,6 +386,18 @@ def parse(token_list=[]):
                         ir_form.append((None, POP)) # See Note 6
                 else:
                     check(not ret_statement, '"return" must return something.', line_number)
+            elif value == COLON:
+                check(proc_cond_header, 'Illegal use of ":".', line_number)
+                check(not op_stack, 'Illegal statement, unexpected ":".', line_number)
+                check(len(num_stack) == 1\
+                    and len(effect) == 1 and effect[-1] == 1, 'Syntax error.', line_number)
+                check(created_vars == 0, 'Cannot create variables here.', line_number)
+
+                effect[-1] = 0
+                ir_form.append((num_stack.pop(), LOAD_CC))
+                ir_form.append((cond_lbls[-1][0], COND_BRANCH))
+
+                proc_cond_header = False
             else:
                 op_stack.append(value)
                 effect[-1] += effect_of[value]
@@ -343,7 +417,7 @@ def parse(token_list=[]):
     # to be broadcast elsewhere.
     check(not num_stack, 'Missing semicolon?', line_number)
 
-    return ir_form
+    return ir_form, labels, ln_to_label
 
 
 def check_operands_exist(operands, variables, line_number):
@@ -517,6 +591,10 @@ def process_define(token_list, i, functions, defined_funcs, line_number):
             i = i + 1
             tk_type, value = token_list[i]
 
+    check(args_count == functions[func_name],
+        'Argument count mismatch. Expected {} arguments (from declaration), but found {}.'
+        .format(functions[func_name], args_count), line_number)
+
     # Should be pointing at the right paren. Now we move to ":"
     i = i + 1
     tk_type, value = token_list[i]
@@ -527,3 +605,6 @@ def process_define(token_list, i, functions, defined_funcs, line_number):
     i = i + 1
 
     return func_name, param_list, i, line_number
+
+def generate_label(n, line_number):
+    return 'COND_{}_{}_ln_{}'.format(randint(0, 1000), n, line_number)
