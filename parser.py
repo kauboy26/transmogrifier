@@ -252,7 +252,7 @@ def parse(token_list=[]):
                     if vars_to_remove:
                         ir_form.append((vars_to_remove, DESTROY_VARS))
 
-                    labels[lbl] = len(ir_form)
+                    labels[lbl] = len(ir_form) # Not 8
                     labels[end_lbl] = len(ir_form)
                     ln_to_label[len(ir_form)] = end_lbl
 

@@ -37,7 +37,12 @@ CREATE, to the IRMachine, means if the second operand is not the stack top ($): 
 If stacktop, then something was pushed on to the stack as a result of an operation. Otherwise a statement like "4;" was encountered, and nothing needs to be done.
 
 ## Note 7
-The RETURN keyword does two different things depending on the second operand; if the second operand is the stack top ($), then the IRMachine must pop, place the popped value where the return value is expected, and then return to the caller. If the second operand is anything else, there is no need to pop: just copy the value over to the return value spot and then return to the caller.
+The RETURN keyword does two different things depending on the second operand; if the second operand is the stack top ($), then the IRMachine must pop, place the popped value where the return value is expected, and then return to the caller. If the second operand is anything else, there is no need to pop: just copy the value over to the return value spot and then return to the caller.  
+
+LOAD_CC also has two meanings, very similar to RETURN.
+
+## Note 8
+More than one label can map to an instruction. This was to solve the "last elif" problem. The two labels will be replaced with a single label in a later stage of processing.
 
 # Other issues
 
