@@ -55,6 +55,14 @@ INJECT = 'inject'
 # These are different, since they instruct the (IR) machine what to do.
 CREATE = '__create__'
 POP = '__pop__'
+PUSH = '__push__'
+HALT = '__halt__'
+SETUP_FUNC = '__setup_func__'
+DESTROY_VARS = '__destroy_vars__'
+JROUTINE = '__jump_to_routine___'
+JUMP = '__jump__'
+R_TOCALLER = '__return_to_caller__'
+FETCH_RV = '__fetch_return_value__'
 
 HIGHEST_PRECEDENCE = 500
 LOWEST_PRECEDENCE = 0
@@ -88,11 +96,20 @@ def parse(token_list=[]):
                     BLOCK: 0, PRINT: 0, INJECT: 0}
 
     line_number = 1
+    labels = {}
+    ln_to_label = {}
 
     functions = {}
+    defined_funcs = {}
+
+    # See note 4
     variables = {}
+    vars_this_block = []
+    curr_scope_type = []
 
     created_vars = 0 # Counts the number of variables created in a single statement.
+    main_found = False
+    proc_func = False
 
     op_stack = []
     num_stack = []
@@ -120,7 +137,13 @@ def parse(token_list=[]):
             i = i + 1
         elif tk_type == KEYWORD:
             if value == MAIN:
-                pass
+                check(not main_found, 'Main method can be declared only once.', line_number)
+                check(not proc_func, 'Bad syntax: the word "main" is reserved.', line_number)
+                main_found = True
+                proc_func = True
+                i, line_number = process_main_header(token_list, i, line_number)
+                vars_this_block.append([])
+                curr_scope_type.append(MAIN)
             elif value == DECLARE:
                 # Process the entire declare here.
                 func_name, args_count, i, line_number\
@@ -128,8 +151,25 @@ def parse(token_list=[]):
                 functions[func_name] = args_count
                 precedence[func_name] = 200
                 args_needed[func_name] = args_count
+                effect_of[func_name] = 1 - args_count
             elif value == DEF:
-                pass
+                check(not proc_func, 'Functions cannot be declared within functions.', line_number)
+                proc_func = True
+                func_name, param_list, i, line_number\
+                    = process_define(token_list, i, functions, defined_funcs,
+                        line_number)
+
+                ir_form.append((param_list, SETUP_FUNC))
+
+                labels[func_name] = len(ir_form)
+                ln_to_label[len(ir_form)] = func_name
+
+                vars_this_block.append(param_list)
+                curr_scope_type.append(DEF)
+
+                for param in param_list:
+                    variables[param] = 0
+
             elif value == IF:
                 pass
             elif value == ELIF:
@@ -139,7 +179,21 @@ def parse(token_list=[]):
             elif value == WHILE:
                 pass
             elif value == END:
-                pass
+                check(curr_scope_type, 'Mismatched "end" (extra?).', line_number)
+                scope_type = curr_scope_type.pop()
+
+                vars_to_remove = vars_this_block.pop()
+                ir_form.append((vars_to_remove, DESTROY_VARS))
+                remove_variables(vars_to_remove, variables)
+
+                if scope_type == MAIN:
+                    ir_form.append((None, HALT))
+                    proc_func = False
+                if scope_type == DEF:
+                    ir_form.append((None, R_TOCALLER))
+                    proc_func = False
+                
+                i = i + 1
         elif tk_type == OPERATOR:
 
             if value == LPAREN:
@@ -168,7 +222,8 @@ def parse(token_list=[]):
                 i = i + 1
                 continue
 
-            while op_stack and precedence[value] <= precedence[op_stack[-1]]:
+            while op_stack and precedence[value] <= precedence[op_stack[-1]]\
+                and effect[-1] > 0:
 
                 operation = op_stack.pop()
 
@@ -176,16 +231,8 @@ def parse(token_list=[]):
                     'Hints: Mismatched parens. See "{}".'
                     .format(operation), line_number)
 
-                if value in functions:
-                    args_found = args_count_stack.pop()
-                    args_req = args_needed[value]
-                    check((args_req <= 1 and args_found == 0)\
-                        or args_req == args_found + 1, 'Not enough args found '
-                        'to function {}. Needed {}, but found {}.'
-                        .format(value, args_req, args_found + 1), line_number)
 
                 operands = [num_stack.pop() for i in range(args_needed[operation])]
-
                 # Ensure the required variables exist, or create variables in
                 # the case of an assignment statement.
                 if operation == EQUAL:
@@ -196,10 +243,25 @@ def parse(token_list=[]):
                     if v not in variables:
                         # Create the variable
                         ir_form.append(([operands[-1]], CREATE))
+                        check(proc_func, 'Statements must appear inside funcs', line_number) # TODO
+                        vars_this_block[-1].append(v)
                         created_vars = created_vars + 1
                         variables[v] = 0
                 else:
                     check_operands_exist(operands, variables, line_number)
+
+                if operation in functions:
+                    args_found = args_count_stack.pop()
+                    args_req = args_needed[operation]
+                    check((args_req <= 1 and args_found == 0)\
+                        or args_req == args_found + 1, 'Not enough args found '
+                        'to function {}. Needed {}, but found {}.'
+                        .format(value, args_req, args_found + 1), line_number)
+                    ir_form.append((operands, PUSH))
+                    ir_form.append((operation, JROUTINE))
+                    ir_form.append((operands, FETCH_RV))
+                    num_stack.append((STACK_TOP, '$'))
+                    continue
 
                 ir_form.append((operands, operation))
 
@@ -207,6 +269,7 @@ def parse(token_list=[]):
 
             # At this point, either the operand stack is empty, or the top most
             # operand has a precedence lower than the newest operand.
+            check(effect[-1] >= 0, 'Syntax error, too few operands?', line_number)
             if value == RPAREN:
                 check(op_stack and op_stack[-1] == LPAREN, 'Mismatched parens.',
                     line_number)
@@ -229,7 +292,7 @@ def parse(token_list=[]):
                 check(not op_stack, 'Illegal statement.', line_number)
                 check(len(num_stack) <= 1 and len(effect) == 1 and effect[-1] <= 1,
                     'Error in statement. Hints: an operation has too many arguments,'
-                    ' or semicolon could be missing.',
+                    ' or semicolon could be missing, possibly from a previous statement.',
                     line_number)
                 check(created_vars <= 1, 'Cannot create more than one variable '
                     'in a single statement. Ensure that at most one variable is'
@@ -252,7 +315,6 @@ def parse(token_list=[]):
             else:
                 op_stack.append(value)
                 effect[-1] += effect_of[value]
-                check(effect[-1] >= 0, 'Too few operands.', line_number)
 
             i = i + 1
         elif tk_type == COMMENT:
@@ -279,7 +341,6 @@ def check_operands_exist(operands, variables, line_number):
     for c, v in operands:
         check(c != ID or v in variables, 'The variable "{}" has not been'
             ' defined'.format(v), line_number)
-
 
 def process_declare(token_list, i, functions, line_number):
     """
@@ -338,3 +399,119 @@ def process_declare(token_list, i, functions, line_number):
 
     i = i + 1
     return func_name, args_count, i, line_number
+
+def process_main_header(token_list, i, line_number):
+    """
+    i should be pointing at the token, "MAIN"
+    """
+
+    i = i + 1
+    length = len(token_list)
+    while i < length:
+        tk_type, value = token_list[i]
+        if tk_type == NEWLINE:
+            line_number += 1
+            i = i + 1
+        elif tk_type == COMMENT:
+            i = i + 1
+        elif tk_type == OPERATOR and value == COLON:
+            i = i + 1
+            break
+        else:
+            check(False, 'Invalid "main" method header syntax: {} : {}'
+                .format(tk_type, value),
+                line_number)
+
+    # "i" now points at the next token (actual stuff within the main method)
+    return i, line_number
+
+def remove_variables(variables_to_remove, variables):
+    for variable in variables_to_remove:
+        del variables[variable]
+
+def process_define(token_list, i, functions, defined_funcs, line_number):
+    """
+    i points to the keyword "def"
+    functions are all the declared functions
+    defined_funcs are all the functions that have been defined
+    """
+
+    i = i + 1
+    length = len(token_list)
+
+    while i < length:
+        tk_type, value = token_list[i]
+        if tk_type == NEWLINE:
+            i = i + 1
+            line_number = line_number + 1
+        elif tk_type == COMMENT:
+            i = i + 1
+        else:
+            break
+
+    # We should now be pointing to the name of the function.
+    tk_type, value = token_list[i]
+    check(tk_type == ID, 'Syntax error. Expected function name, but was {}.'
+        .format(value), line_number)
+
+    check(value in functions, 'The function "{}" has not been declared.'
+        .format(value), line_number)
+    check(value not in defined_funcs, 'The function "{}" has already been defined.'
+        .format(value), line_number)
+
+    func_name = value
+
+    defined_funcs[func_name] = 0
+
+    i = i + 1
+    tk_type, value = token_list[i]
+    check(tk_type == OPERATOR and value == LPAREN, 'Syntax error processing'
+        ' function header to function "{}"'.format(func_name), line_number)
+
+    args_count = 0
+    i = i + 1
+    tk_type, value = token_list[i]
+
+    params = {}
+    param_list = [] # Doing list(params) will give me the thing out of order.
+
+    if (tk_type == OPERATOR and value == RPAREN):
+        args_count = 0
+    else:
+        check(tk_type == ID, 'Invalid syntax in func header.', line_number)
+        check(value not in functions, 'Bad param name.', line_number)
+        params[value] = 0
+        param_list.append(value)
+        args_count = 1
+
+        i = i + 1
+        tk_type, value = token_list[i] # Please excuse the million times I call this line.
+
+
+        while not (tk_type == OPERATOR and value == RPAREN):
+            tk_type, value = token_list[i]
+            check(tk_type == OPERATOR and value == COMMA,
+                'Expected comma, but was "{}"'.format(value), line_number)
+
+            i = i + 1
+            tk_type, value = token_list[i]
+            check(tk_type == ID, 'Invalid syntax in func header.', line_number)
+            check(value not in functions and value not in params,
+                'Bad / duplicate param name.', line_number)
+            args_count += 1
+            params[value] = 0
+            param_list.append(value)
+
+            i = i + 1
+            tk_type, value = token_list[i]
+
+    # Should be pointing at the right paren. Now we move to ":"
+    i = i + 1
+    tk_type, value = token_list[i]
+    check(tk_type == OPERATOR and value == COLON,
+        'Invalid syntax in func header. Expected ":" but was "{}".'
+        .format(value), line_number)
+
+    i = i + 1
+
+    return func_name, param_list, i, line_number
