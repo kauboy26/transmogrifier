@@ -11,6 +11,7 @@ NEWLINE = 5
 COMMENT = 6
 
 STACK_TOP = 8
+MEM_LOC = 9
 
 AND = 'and'
 OR = 'or'
@@ -240,8 +241,9 @@ def parse(token_list=[]):
                     check_operands_exist(operands[:-1], variables, line_number)
                     check(not op_stack, 'Illegal statement.', line_number) # See note 3
                     c, v = operands[-1]
-                    check(c == ID, 'Cannot assign value to a literal.', line_number)
-                    if v not in variables:
+                    check(c == ID or c == MEM_LOC,
+                        'Cannot assign value to a literal.', line_number)
+                    if c == ID and v not in variables:
                         # Create the variable
                         ir_form.append((operands, CREATE))
                         vars_this_block[-1].append(v)
@@ -267,8 +269,12 @@ def parse(token_list=[]):
                     num_stack.append((STACK_TOP, '$'))
                     continue
 
-                ir_form.append((operands, operation))
+                if operation == VALUE_AT:
+                    ir_form.append((operands, operation))
+                    num_stack.append((MEM_LOC, '@'))
+                    continue
 
+                ir_form.append((operands, operation))
                 num_stack.append((STACK_TOP, '$'))
 
             # At this point, either the operand stack is empty, or the top most
