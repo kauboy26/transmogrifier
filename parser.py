@@ -111,6 +111,7 @@ def parse(token_list=[]):
     created_vars = 0 # Counts the number of variables created in a single statement.
     main_found = False
     proc_func = False
+    ret_statement = False
 
     op_stack = []
     num_stack = []
@@ -159,13 +160,13 @@ def parse(token_list=[]):
                 func_name, param_list, i, line_number\
                     = process_define(token_list, i, functions, defined_funcs,
                         line_number)
-
+                print('param list:', param_list)
                 ir_form.append((param_list, SETUP_FUNC))
 
                 labels[func_name] = len(ir_form)
                 ln_to_label[len(ir_form)] = func_name
 
-                vars_this_block.append(param_list)
+                vars_this_block.append(param_list[:])
                 curr_scope_type.append(DEF)
 
                 for param in param_list:
@@ -184,7 +185,7 @@ def parse(token_list=[]):
                 scope_type = curr_scope_type.pop()
 
                 vars_to_remove = vars_this_block.pop()
-                ir_form.append((vars_to_remove, DESTROY_VARS))
+                # ir_form.append((vars_to_remove, DESTROY_VARS))
                 remove_variables(vars_to_remove, variables)
 
                 if scope_type == MAIN:
@@ -193,8 +194,12 @@ def parse(token_list=[]):
                 if scope_type == DEF:
                     ir_form.append((None, R_TOCALLER))
                     proc_func = False
-                
                 i = i + 1
+            elif value == RETURN:
+                check(not ret_statement, 'Illegal use of "return" keyword', line_number)
+                ret_statement = True
+                i = i + 1
+
         elif tk_type == OPERATOR:
 
             if value == LPAREN:
@@ -269,11 +274,6 @@ def parse(token_list=[]):
                     num_stack.append((STACK_TOP, '$'))
                     continue
 
-                if operation == VALUE_AT:
-                    ir_form.append((operands, operation))
-                    num_stack.append((MEM_LOC, '@'))
-                    continue
-
                 ir_form.append((operands, operation))
                 num_stack.append((STACK_TOP, '$'))
 
@@ -313,15 +313,17 @@ def parse(token_list=[]):
                 effect[-1] = 0
 
                 # The num_stack has either 0 or 1 items in it. If it has 0 items
-                # then that means this was probably (must) an empty statement.
+                # then that means this was probably (definitely) an empty statement.
                 # Otherwise it means things went as usual. See note 2.
                 if num_stack:
                     c, v = num_stack.pop()
-                    if c == STACK_TOP:
-                        # Therefore something was pushed on to the stack as a
-                        # result of an operation. Otherwise a statement like
-                        # "4;" was encountered, and nothing needs to be done.
-                        ir_form.append((None, POP))
+                    if ret_statement:
+                        ir_form.append(([(c, v)], RETURN))
+                        ret_statement = False
+                    elif c == STACK_TOP:
+                        ir_form.append((None, POP)) # See Note 6
+                else:
+                    check(not ret_statement, '"return" must return something.', line_number)
             else:
                 op_stack.append(value)
                 effect[-1] += effect_of[value]

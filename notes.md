@@ -33,6 +33,12 @@ The curr_scope_type is to keep track of the innermost scope we're in (are we in 
 The meaning of CREATE:  
 CREATE, to the IRMachine, means if the second operand is not the stack top ($): claim space for the new variable, and set the value to whavever it should be. If the second oeprand is the top of the stack: claim space (by eating up the top of the stack) and mark this assign this space to the new variable. Also EQUAL does not eat things from the top of the stack!
 
+## Note 6
+If stacktop, then something was pushed on to the stack as a result of an operation. Otherwise a statement like "4;" was encountered, and nothing needs to be done.
+
+## Note 7
+The RETURN keyword does two different things depending on the second operand; if the second operand is the stack top ($), then the IRMachine must pop, place the popped value where the return value is expected, and then return to the caller. If the second operand is anything else, there is no need to pop: just copy the value over to the return value spot and then return to the caller.
+
 # Other issues
 
 * Tried to execute "a = (1 +;", instead of getting "not enough operands" or "missing paren" message, got the variable "a" is not defined. This is because the stack does not care about the actual positions of operands, and so in the popping process the "a" and "1" are popped to be added, but "a" obviously hasn't been defined yet.
