@@ -60,18 +60,19 @@ SETUP_MAIN = '__setup_main__'
 
 class IRMachine1():
     def __init__(self):
+        print('Creating IR....')
         self.var_loc = {}
-        self.memory = [randint(0, 2 ** 16) for i in range(1000)]
+        self.memory = [randint(0, 2 ** 16) for i in range(10000)]
         self.sp = randint(0, 1000)
         self.fp = randint(0, 1000)
-        self.stack_frame = [{} for i in randint(0, 10)]
+        self.stack_frame = [{} for i in range(randint(0, 10))]
         self.running = True
         self.pc = 0
         self.link = randint(0, 1000) # The link register
 
         self.cc = randint(-999, 1000)
 
-        pass
+        print('Finished creating IR.')
 
     def perform_operation(self, operands, operation, labels, inv_labels):
         
@@ -94,7 +95,7 @@ class IRMachine1():
         elif operation == R_TOCALLER:
             self.return_to_caller()
         elif operation == RETURN:
-            self.return_value()
+            self.return_value(operands)
         elif operation == FETCH_RV:
             self.fetch_return_value(operands)
         elif operation == LOAD_CC:
@@ -103,31 +104,47 @@ class IRMachine1():
             self.conditional_branch(operands, labels)
         elif operation == BRANCH:
             self.branch()
+        else:
 
+            if operation == EQUAL:
+                pass
 
-        if operation == NOT:
-            return int(not op0)
+            vals = self._get_operand_values(operands)
 
-        if operation == PLUS:
-            return op0 + op1
-        elif operation == MINUS:
-            return op0 - op1
-        elif operation == MULTI:
-            return op0 * op1
-        elif operation == DIVIS:
-            return op0 / op1
-        elif operation == MODULO:
-            return op0 % op1
-        elif operation == AND:
-            return int(op0 and op1)
-        elif operation == OR:
-            return int(op0 and op1)
-        elif operation == GTHAN:
-            return int(op0 > op1)
-        elif operation == LTHAN:
-            return int(op0 < op1)
-        elif operation == DOUBLE_EQ:
-            return int(op0 == op1)
+            op0 = vals[0] # These are in the wrong order
+
+            if operation == NOT:
+                val = int(not op0)
+
+            op0 = vals[1]
+            op1 = vals[0]
+
+            if operation == PLUS:
+                val = op0 + op1
+            elif operation == MINUS:
+                val = op0 - op1
+            elif operation == MULTI:
+                val = op0 * op1
+            elif operation == DIVIS:
+                val = op0 / op1
+            elif operation == MODULO:
+                val = op0 % op1
+            elif operation == AND:
+                val = int(op0 and op1)
+            elif operation == OR:
+                val = int(op0 and op1)
+            elif operation == GTHAN:
+                val = int(op0 > op1)
+            elif operation == LTHAN:
+                val = int(op0 < op1)
+            elif operation == DOUBLE_EQ:
+                val = int(op0 == op1)
+
+            self.sp += 1
+
+            self.memory[self.sp] = val
+
+            self.pc += 1
 
 
     def run(self, instructions, labels, inv_labels):
@@ -135,9 +152,16 @@ class IRMachine1():
         self.pc = 0
 
         while (self.running):
-            operands, instruction = instructions[i]
+            operands, instruction = instructions[self.pc]
+
+            print(self.pc, ':', instruction)
 
             self.perform_operation(operands, instruction, labels, inv_labels)
+
+        print('\nPrinting memory:\n')
+
+        for i in range(20):
+            print(i, ':', self.memory[i])
 
     def setup_main(self):
         """
@@ -198,23 +222,10 @@ class IRMachine1():
         # responsibility.
 
         # Stores the actual values of the params
-        vals = []
+        vals = self._get_operand_values(params)
 
-        i = 0
-
-        for t, op in params:
-            if t == STACK_TOP:
-                vals.append(self.memory[self.sp - i])
-                i += 1
-            elif t == ID:
-                vals.append(self.memory[self.fp + self.stack_frame[-1][op]])
-            elif t == NUMBER:
-                vals.append(op)
-
-
-        # Makee stack pointer point to where it should be pointing after popping
-        # $ type arguments off the stack.
-        self.sp -= i
+        print('Pushing vals:')
+        print(vals)
 
         # Claim space for the new values
         self.sp += len(vals)
@@ -257,10 +268,12 @@ class IRMachine1():
         num_params = len(operands)
 
         for i, param in enumerate(operands):
-            new_frame[param] = self.fp - 3 - i
+            new_frame[param] = - 4 - i
 
         self.stack_frame.append(new_frame)
 
+        print('Stack frame: after setting up new stack:')
+        print(self.stack_frame)
         self.pc += 1
 
     def destroy_vars(self, operands):
@@ -310,12 +323,12 @@ class IRMachine1():
         """
         RETURN has two meanings:
         1) If the operand is $, then pop the value and place it into the RV spot
-        2) If the operand is ID, NUM, etc, then copy its value to the RV spot.
+        2) If the operand is ID, NUMBER, etc, then copy its value to the RV spot.
 
         Then, do the rest as return_to_caller does
         """
         
-        t, op = operand
+        t, op = operand[0]
         val = 0
 
         ret_val = 0
@@ -327,7 +340,7 @@ class IRMachine1():
         elif t == ID:
             self.memory[self.fp - 3] =\
                 self.memory[self.fp + self.stack_frame[-1][op]]
-        elif t == NUM:
+        elif t == NUMBER:
             self.memory[self.fp - 3] = op
 
 
@@ -394,6 +407,8 @@ class IRMachine1():
         elif t == NUMBER:
             self.cc = op
 
+        print('CC loaded with {}.'.format(self.cc))
+
         self.pc += 1
 
     def conditional_branch(self, lbl, labels):
@@ -412,3 +427,28 @@ class IRMachine1():
         Unconditionally branch to the label.
         """
         self.pc = labels[lbl]
+
+    def _get_operand_values(self, operands):
+        """
+        Returns the values of the operands requested. Also handles reclaiming
+        stack space whenever things were popped.
+        """
+        vals = []
+
+        i = 0
+
+        for t, op in operands:
+            if t == STACK_TOP:
+                vals.append(self.memory[self.sp - i])
+                i += 1
+            elif t == ID:
+                vals.append(self.memory[self.fp + self.stack_frame[-1][op]])
+            elif t == NUMBER:
+                vals.append(op)
+
+
+        # Makee stack pointer point to where it should be pointing after popping
+        # $ type arguments off the stack.
+        self.sp -= i
+
+        return vals
