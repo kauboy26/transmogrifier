@@ -44,6 +44,9 @@ LOAD_CC also has two meanings, very similar to RETURN.
 ## Note 8
 More than one label can map to an instruction. This was to solve the "last elif" problem. The two labels will be replaced with a single label in a later stage of processing.
 
+## Note 9
+The FETCH_RV instruction has a list of operands. This is simply the list of params, so the IRMachine knows how many params to pop off the stack. The actual contents of the list DO NOT MATTER!
+
 # Other issues
 
 * Tried to execute "a = (1 +;", instead of getting "not enough operands" or "missing paren" message, got the variable "a" is not defined. This is because the stack does not care about the actual positions of operands, and so in the popping process the "a" and "1" are popped to be added, but "a" obviously hasn't been defined yet.
