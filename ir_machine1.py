@@ -191,8 +191,42 @@ class IRMachine1():
 
     def push(self, params):
         """
-        Pushes params on to the stack, usually to be consumed by some funciton.
+        Pushes params on to the stack, usually to be consumed by some function.
         """
+
+        # For now, screw the intelligence crap. That's the code generator's
+        # responsibility.
+
+        # Stores the actual values of the params
+        vals = []
+
+        i = 0
+
+        for t, op in params:
+            if t == STACK_TOP:
+                vals.append(self.memory[self.sp - i])
+                i += 1
+            elif t == ID:
+                vals.append(self.memory[self.fp + self.stack_frame[-1][op]])
+            elif t == NUMBER:
+                vals.append(op)
+
+
+        # Makee stack pointer point to where it should be pointing after popping
+        # $ type arguments off the stack.
+        self.sp -= i
+
+        # Claim space for the new values
+        self.sp += len(vals)
+
+        # Copy the values on to the stack
+        i = 0
+        for v in vals:
+            self.memory[self.sp - len(vals) + 1 + i] = v
+            i += 1
+
+        self.pc += 1
+
 
     def halt(self):
         """
