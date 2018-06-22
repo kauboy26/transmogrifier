@@ -309,6 +309,10 @@ def parse(token_list=[]):
 
         elif tk_type == OPERATOR:
 
+            check(curr_scope_type, 'Illegal syntax! Hints: Cannot use declare '
+                'statements outside of "main" or a "function". Another '
+                'possibility is that a keyword has been mispelled.', line_number)
+
             if value == LPAREN:
                 op_stack.append(value)
                 effect.append(0)
