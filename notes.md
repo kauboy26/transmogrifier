@@ -31,7 +31,8 @@ The curr_scope_type is to keep track of the innermost scope we're in (are we in 
 
 ## Note 5
 The meaning of CREATE:  
-CREATE, to the IRMachine, means if the second operand is not the stack top ($): claim space for the new variable, and set the value to whavever it should be. If the second oeprand is the top of the stack: claim space (by eating up the top of the stack) and mark this assign this space to the new variable. Also EQUAL does not eat things from the top of the stack!
+CREATE, to the IRMachine, means if the second operand is not the stack top ($): claim space for the new variable, and set the value to whavever it should be. If the second oeprand is the top of the stack: claim space (by eating up the top of the stack) and mark this assign this space to the new variable.  
+Also EQUAL does not eat things from the top of the stack! That is, IT WILL BE FOLLOWED BY A POP when necessary.
 
 ## Note 6
 If stacktop, then something was pushed on to the stack as a result of an operation. Otherwise a statement like "4;" was encountered, and nothing needs to be done.

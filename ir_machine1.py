@@ -104,6 +104,9 @@ class IRMachine1():
             self.conditional_branch(operands, labels)
         elif operation == BRANCH:
             self.branch()
+
+        elif operation == EQUAL:
+            self.assign(operands) 
         else:
 
             if operation == EQUAL:
@@ -148,19 +151,28 @@ class IRMachine1():
 
 
     def run(self, instructions, labels, inv_labels):
-
+        """
+        Runs a set of instructions given labels and inv_labels. The
+        instructions, labels and inv_labels are assumed to be valid, and the
+        IRMachine performs no checks.
+        """
+        print('Running...')
         self.pc = 0
 
+        num_executed = 0
         while (self.running):
             operands, instruction = instructions[self.pc]
-
-            print(self.pc, ':', instruction)
-
+            # print(self.pc, ':', instruction)
+            num_executed += 1
             self.perform_operation(operands, instruction, labels, inv_labels)
+
+        print('Finished running. Executed {} instructions.'.format(num_executed))
+
+    def print_memory(self, n):
 
         print('\nPrinting memory:\n')
 
-        for i in range(20):
+        for i in range(n):
             print(i, ':', self.memory[i])
 
     def setup_main(self):
@@ -206,6 +218,24 @@ class IRMachine1():
 
         self.pc += 1
 
+    def assign(self, operands):
+        """
+        Assigns the value to the variable. The variable is assumed to exist.
+        """
+        t1, op1 = operands[0]
+        t0, var = operands[1]
+
+        if t1 == STACK_TOP:
+            self.memory[self.stack_frame[-1][var]] = self.memory[self.sp]
+        elif t1 == ID:
+            self.memory[self.stack_frame[-1][var]] =\
+                self.memory[self.stack_frame[-1][op1]]
+        elif t1 == NUMBER:
+            self.memory[self.stack_frame[-1][var]] = op1
+
+        self.pc += 1
+
+
     def pop(self):
         """
         Pops the stack (doesn't clean up garbage, stack will remain dirty)
@@ -224,8 +254,8 @@ class IRMachine1():
         # Stores the actual values of the params
         vals = self._get_operand_values(params)
 
-        print('Pushing vals:')
-        print(vals)
+        # print('Pushing vals:')
+        # print(vals)
 
         # Claim space for the new values
         self.sp += len(vals)
@@ -272,8 +302,8 @@ class IRMachine1():
 
         self.stack_frame.append(new_frame)
 
-        print('Stack frame: after setting up new stack:')
-        print(self.stack_frame)
+        # print('Stack frame: after setting up new stack:')
+        # print(self.stack_frame)
         self.pc += 1
 
     def destroy_vars(self, operands):
@@ -283,14 +313,14 @@ class IRMachine1():
         - Reclaims the area occupied by them on the stack.
         """
 
-        print('Deleting variables:')
+        # print('Deleting variables:')
 
         num_to_del = len(operands)
 
         # REmove from stack frame
         curr_frame = self.stack_frame[-1]
         for var in operands:
-            print('{} : {}'.format(var, self.memory[self.fp + curr_frame[var]]))
+            # print('{} : {}'.format(var, self.memory[self.fp + curr_frame[var]]))
             del curr_frame[var]
 
         # reclaim stack space
@@ -315,7 +345,7 @@ class IRMachine1():
         Cleans up the stack, and doesn't insert a value to RV position.
         """
 
-        print('Returning GARBAGE to caller.')
+        # print('Returning GARBAGE to caller.')
         self._tear_and_return()
 
 
@@ -345,7 +375,7 @@ class IRMachine1():
 
 
         ret_val = self.memory[self.fp - 3]
-        print('Returning VALUE: {} to caller.'.format(ret_val))
+        # print('Returning VALUE: {} to caller.'.format(ret_val))
 
         self._tear_and_return()
 
@@ -360,9 +390,10 @@ class IRMachine1():
         # Tear down stack and destroy current stack frame
         curr_frame = self.stack_frame.pop()
 
-        print('Deleting vars:')
+        # print('Deleting vars:')
         for var, loc in curr_frame.items():
-            print('{} : {}'.format(var, self.memory[self.fp + loc]))
+            # print('{} : {}'.format(var, self.memory[self.fp + loc]))
+            pass
 
         self.sp = self.fp - 1
 
@@ -407,7 +438,7 @@ class IRMachine1():
         elif t == NUMBER:
             self.cc = op
 
-        print('CC loaded with {}.'.format(self.cc))
+        # print('CC loaded with {}.'.format(self.cc))
 
         self.pc += 1
 
