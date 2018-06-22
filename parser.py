@@ -225,12 +225,18 @@ def parse(token_list=[]):
                 i = i + 1
 
             elif value == ELSE:
+                # Eat the ":"
+                i = i + 1
+                check(i < length, 'End of file reached abruptly.', line_number)
+                tk_type, value = token_list[i]
+                check(tk_type == OPERATOR and value == COLON, '"else" must be '
+                    'followed by a colon (":").', line_number)
+
+                # Check for valid scope
                 check(not proc_cond_header, 'Syntax error with "else".', line_number)
                 check(curr_scope_type and\
                     (curr_scope_type[-1] == IF or curr_scope_type[-1] == ELIF),
                     'Illegal use of "else".', line_number)
-                
-                # TODO make sure ":" was encountered here
 
                 curr_scope = curr_scope_type.pop()
                 curr_scope_type.append(ELSE)
@@ -257,7 +263,21 @@ def parse(token_list=[]):
 
                 i = i + 1
             elif value == WHILE:
-                pass
+                check(not proc_cond_header, 'Syntax error with "while".', line_number)
+                proc_cond_header = True
+
+                head_lbl = generate_label(n_lbl, line_number)
+                end_lbl = generate_label(n_lbl + 1, line_number)
+                n_lbl += 2
+
+                cond_lbls.append((end_lbl, head_lbl))
+                
+                labels[head_lbl] = len(ir_form)
+                ln_to_label[len(ir_form)] = head_lbl
+
+                vars_this_block.append([])
+                curr_scope_type.append(WHILE)
+                i = i + 1
             elif value == END:
                 check(curr_scope_type, 'Mismatched "end" (extra?).', line_number)
                 scope_type = curr_scope_type.pop()
@@ -272,10 +292,10 @@ def parse(token_list=[]):
                         
                     ir_form.append((None, HALT))
                     proc_func = False
-                if scope_type == DEF:
+                elif scope_type == DEF:
                     ir_form.append((None, R_TOCALLER))
                     proc_func = False
-                if scope_type == IF:
+                elif scope_type == IF:
                     lbl, end_lbl = cond_lbls.pop()
 
                     if vars_to_remove:
@@ -283,7 +303,7 @@ def parse(token_list=[]):
                     labels[lbl] = len(ir_form)
                     ln_to_label[len(ir_form)] = lbl
 
-                if scope_type == ELIF:
+                elif scope_type == ELIF:
                     lbl, end_lbl = cond_lbls.pop()
 
                     if vars_to_remove:
@@ -292,7 +312,7 @@ def parse(token_list=[]):
                     labels[lbl] = len(ir_form) # Note 8
                     labels[end_lbl] = len(ir_form)
                     ln_to_label[len(ir_form)] = end_lbl
-                if scope_type == ELSE:
+                elif scope_type == ELSE:
                     lbl, end_lbl = cond_lbls.pop()
 
                     if vars_to_remove:
@@ -300,6 +320,17 @@ def parse(token_list=[]):
 
                     labels[end_lbl] = len(ir_form)
                     ln_to_label[len(ir_form)] = end_lbl # TODO POSSIBLE BUG FROM LABEL CLASH (empty else)?
+                elif scope_type == WHILE:
+
+                    end_lbl, head_lbl = cond_lbls.pop()
+
+                    if vars_to_remove:
+                        ir_form.append((vars_to_remove, DESTROY_VARS))
+
+                    ir_form.append((head_lbl, BRANCH))
+
+                    labels[end_lbl] = len(ir_form)
+                    ln_to_label[len(ir_form)] = end_lbl
 
                 i = i + 1
             elif value == RETURN:

@@ -103,7 +103,7 @@ class IRMachine1():
         elif operation == COND_BRANCH:
             self.conditional_branch(operands, labels)
         elif operation == BRANCH:
-            self.branch()
+            self.branch(operands, labels)
 
         elif operation == EQUAL:
             self.assign(operands) 
@@ -162,7 +162,7 @@ class IRMachine1():
         num_executed = 0
         while (self.running):
             operands, instruction = instructions[self.pc]
-            # print(self.pc, ':', instruction)
+            print(self.pc, ':', operands, instruction)
             num_executed += 1
             self.perform_operation(operands, instruction, labels, inv_labels)
 
@@ -226,10 +226,10 @@ class IRMachine1():
         t0, var = operands[1]
 
         if t1 == STACK_TOP:
-            self.memory[self.stack_frame[-1][var]] = self.memory[self.sp]
+            self.memory[self.fp + self.stack_frame[-1][var]] = self.memory[self.sp]
         elif t1 == ID:
-            self.memory[self.stack_frame[-1][var]] =\
-                self.memory[self.stack_frame[-1][op1]]
+            self.memory[self.fp + self.stack_frame[-1][var]] =\
+                self.memory[self.fp + self.stack_frame[-1][op1]]
         elif t1 == NUMBER:
             self.memory[self.stack_frame[-1][var]] = op1
 
@@ -313,14 +313,14 @@ class IRMachine1():
         - Reclaims the area occupied by them on the stack.
         """
 
-        # print('Deleting variables:')
+        print('Deleting variables:')
 
         num_to_del = len(operands)
 
         # REmove from stack frame
         curr_frame = self.stack_frame[-1]
         for var in operands:
-            # print('{} : {}'.format(var, self.memory[self.fp + curr_frame[var]]))
+            print('{} : {}'.format(var, self.memory[self.fp + curr_frame[var]]))
             del curr_frame[var]
 
         # reclaim stack space
