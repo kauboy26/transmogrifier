@@ -118,6 +118,8 @@ class IRMachine1():
 
             if operation == NOT:
                 val = int(not op0)
+            elif operation == B_NOT:
+                val = int(~op0)
 
             op0 = vals[1]
             op1 = vals[0]
@@ -135,13 +137,21 @@ class IRMachine1():
             elif operation == AND:
                 val = int(op0 and op1)
             elif operation == OR:
-                val = int(op0 and op1)
+                val = int(op0 or op1)
             elif operation == GTHAN:
                 val = int(op0 > op1)
             elif operation == LTHAN:
                 val = int(op0 < op1)
             elif operation == DOUBLE_EQ:
                 val = int(op0 == op1)
+            elif operation == LTHANEQ:
+                val = int(op0 <= op1)
+            elif operands == GTHANEQ:
+                val = int(op0 >= op1)
+            elif operands == B_AND:
+                val = int(op0 & op1)
+            elif operands == B_OR:
+                val = int(op0 | op1)
 
             self.sp += 1
 
@@ -162,7 +172,7 @@ class IRMachine1():
         num_executed = 0
         while (self.running):
             operands, instruction = instructions[self.pc]
-            print(self.pc, ':', operands, instruction)
+            # print(self.pc, ':', operands, instruction)
             num_executed += 1
             self.perform_operation(operands, instruction, labels, inv_labels)
 
