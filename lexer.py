@@ -8,9 +8,10 @@ from miscell import check
 
 keywords = {'def': 0, 'if': 0, 'elif': 0,
         'else': 0, 'while': 0, 'end': 0,
-        'main': 0, 'return': 0, 'declare': 0}
+        'main': 0, 'return': 0, 'declare': 0,
+        'define': 0}
 
-multichar_ops = {'value_at': 0, 'address_of': 0, 'block': 0,
+multichar_ops = {'mem': 0, 'addrOf': 0, 'block': 0,
                 'inject': 0, 'print': 0, 'and': 0, 'or': 0, 'not': 0}
 
 NUMBER = 0

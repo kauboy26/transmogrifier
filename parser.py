@@ -40,10 +40,11 @@ LTHANEQ = '<='
 GTHANEQ = '>='
 DOUBLE_EQ = '=='
 
-VALUE_AT = 'value_at'
-ADDRESS_OF = 'address_of'
+MEM = 'mem'
+ADDRESS_OF = 'addrOf'
 BLOCK = 'block'
 DEF = 'def'
+DEF2 = 'define'
 DECLARE = 'declare'
 IF = 'if'
 ELIF = 'elif'
@@ -85,21 +86,21 @@ def parse(token_list=[]):
                     COLON: 70,
                     LPAREN: 0, RPAREN: 1,
                     # functions:
-                    VALUE_AT: 200, ADDRESS_OF: 200, BLOCK: 200, PRINT: 200, INJECT: 200}
+                    MEM: 200, ADDRESS_OF: 200, BLOCK: 200, PRINT: 200, INJECT: 200}
 
 
     args_needed = {MULTI: 2, DIVIS: 2, MODULO: 2, PLUS: 2, MINUS: 2, NOT: 1,
                     AND: 2, OR: 2, LTHAN: 2, GTHAN: 2, GTHANEQ: 2, LTHANEQ: 2,
                     DOUBLE_EQ: 2, EQUAL: 2,
-                    VALUE_AT: 1, ADDRESS_OF: 1,
+                    MEM: 1, ADDRESS_OF: 1,
                     BLOCK: 1, PRINT: 1, INJECT: 1}
 
-    primitive_functions = {VALUE_AT: 0, ADDRESS_OF: 0, BLOCK: 0, PRINT: 0,
+    primitive_functions = {MEM: 0, ADDRESS_OF: 0, BLOCK: 0, PRINT: 0,
                             INJECT: 0}
 
     effect_of = {MULTI: -1, DIVIS: -1, MODULO: -1, PLUS: -1, MINUS: -1, NOT: 0,
                     AND: -1, OR: -1, LTHAN: -1, GTHAN: -1, GTHANEQ: -1, LTHANEQ: -1,
-                    DOUBLE_EQ: -1, EQUAL: -1, VALUE_AT: 0, ADDRESS_OF: 0,
+                    DOUBLE_EQ: -1, EQUAL: -1, MEM: 0, ADDRESS_OF: 0,
                     BLOCK: 0, PRINT: 0, INJECT: 0}
 
     line_number = 1
@@ -168,7 +169,7 @@ def parse(token_list=[]):
                 precedence[func_name] = 200
                 args_needed[func_name] = args_count
                 effect_of[func_name] = 1 - args_count
-            elif value == DEF:
+            elif value == DEF or value == DEF2:
                 check(not proc_func, 'Functions cannot be declared within functions.', line_number)
                 proc_func = True
                 func_name, param_list, i, line_number\
@@ -350,7 +351,7 @@ def parse(token_list=[]):
                 i = i + 1
                 continue
 
-            if value in functions:
+            if value in functions or value in primitive_functions:
                 args_count_stack.append(0)
 
             if (value == PLUS or value == MINUS) and effect[-1] == 0:
@@ -384,12 +385,11 @@ def parse(token_list=[]):
                 # Ensure the required variables exist, or create variables in
                 # the case of an assignment statement.
                 if operation == EQUAL:
-                    check(proc_func, 'Statements must appear inside funcs', line_number) # TODO
                     check_operands_exist(operands[:-1], variables, line_number)
                     check(not op_stack, 'Illegal statement.', line_number) # See note 3
                     c, v = operands[-1]
-                    check(c == ID or c == MEM_LOC,
-                        'Cannot assign value to a literal.', line_number)
+                    print(c, v)
+                    check(c == ID or c == MEM_LOC, 'Cannot assign value to a literal.', line_number)
                     if c == ID and v not in variables:
                         # Create the variable
                         ir_form.append((operands, CREATE))
@@ -398,18 +398,33 @@ def parse(token_list=[]):
                         variables[v] = 0
                         continue
                     ir_form.append((operands, operation))
-                    num_stack.append(operands[0])
+
+                    # Without this line the semi-colon operator won't know whether to issue a POP.
+                    num_stack.append(operands[0]) 
                     continue
                 else:
                     check_operands_exist(operands, variables, line_number)
 
-                if operation in functions:
+                if operation in functions or operation in primitive_functions:
                     args_found = args_count_stack.pop()
                     args_req = args_needed[operation]
                     check((args_req <= 1 and args_found == 0)\
                         or args_req == args_found + 1, 'Not enough args found '
                         'to function {}. Needed {}, but found {}.'
                         .format(value, args_req, args_found + 1), line_number)
+
+                    if operation in primitive_functions:
+                        if operation == MEM:
+                            if value == EQUAL:
+                                # Simply convert
+                                num_stack.append((MEM_LOC, operands[-1]))
+                                continue
+                            ir_form.append((operands[0], operation))
+                            num_stack.append((STACK_TOP, '$'))
+                        elif operation == ADDRESS_OF:
+                            pass
+                        continue
+
                     ir_form.append((operands, PUSH))
                     ir_form.append((operation, JROUTINE))
                     ir_form.append((operands, FETCH_RV))
@@ -597,7 +612,7 @@ def remove_variables(variables_to_remove, variables):
 
 def process_define(token_list, i, functions, defined_funcs, line_number):
     """
-    i points to the keyword "def"
+    i points to the keyword "def" when this is called.
     functions are all the declared functions
     defined_funcs are all the functions that have been defined
     """
