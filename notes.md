@@ -53,6 +53,9 @@ The instruction MEM_ASSIGN is the memory counterpart of assign (equal operator).
 
 The MEM instruction, though it looks like a function if you look at the syntax, isn't really a function. It is actually just another operation like addition or subtraction. Therefore, it doesn't require arguments to be pushed on to the stack, arguments to be popped off the stack, return values to be fetched, return addresses to be saved, etc.
 
+## Note 11
+Depending on whether the value to be assigned to is of type STACK TOP, the location to be looked at will change. If we are trying to accomplish something like ```mem(1 + 1) = 1 + 1;```, in the end we are trying to do ```mem($1) = $2;```. Here, $1 will be found below $2 on the stack.
+
 # Other issues
 
 * Tried to execute "a = (1 +;", instead of getting "not enough operands" or "missing paren" message, got the variable "a" is not defined. This is because the stack does not care about the actual positions of operands, and so in the popping process the "a" and "1" are popped to be added, but "a" obviously hasn't been defined yet.
