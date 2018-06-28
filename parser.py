@@ -70,7 +70,7 @@ LOAD_CC = '__load_cc__'
 COND_BRANCH = '__cond_branch__'
 BRANCH = '__branch__'
 SETUP_MAIN = '__setup_main__'
-MEM_ASSIGN = '__mem_assign__' # not too sure if this is needed
+MEM_ASSIGN = '__mem_assign__'
 
 HIGHEST_PRECEDENCE = 500
 LOWEST_PRECEDENCE = 0

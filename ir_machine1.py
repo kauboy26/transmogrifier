@@ -69,9 +69,7 @@ class IRMachine1():
         self.running = True
         self.pc = 0
         self.link = randint(0, 1000) # The link register
-
         self.cc = randint(-999, 1000)
-
         print('Finished creating IR.')
 
     def perform_operation(self, operands, operation, labels, inv_labels):

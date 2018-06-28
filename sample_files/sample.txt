@@ -1,11 +1,14 @@
 # This file isn't broken. It should compile properly into something.
-a = 0;
-b = a + 3000;
-c = b * a + (a + a);
-;;#; This is fucked up man!!!;;
-b = #20;
-c - b;
-b + 0;
-d = 1;
-c = 1;
-c = 0;1;
+
+main:
+    a = 0;
+    b = a + 3000;
+    c = b * a + (a + a);
+    ;;#; This is messed up man!!!;;
+    b = #20;
+    c - b;
+    b + 0;
+    d = 1;
+    c = 1;
+    c = 0;1;
+end

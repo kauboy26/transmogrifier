@@ -1,35 +1,73 @@
+# Comments start with a "#", and terminate at the end of the line.
+
 # A program that this compiler can digest must follow the pattern
 # defined in this file.
 
 # First declare whatever functions you might want to use later. The
-# names of the params are unimportant, but their number is enforced
-# is kept track of. Calls to these functions must have the number
-# of params specified.
+# names of the params are unimportant, but the number of params declared is
+# tracked. When the function is called or defined, the number of params specified
+# will be checked.
 declare function1(a, b, c);
 declare function2();
+declare function3(param);
+
+
+
 
 # The "main" method. It isn't just another function as it is in other
 # languages. It must be written right after the function declarations,
 # and before the function definitions.
 main:
+
+    # Variables are created by simply declaring them.
+    # Variables created within some scope are destroyed after exiting that scope.
     i = 1;
-    j = function1(a, b, function2());
+    j = function1(i * i, i + 1, function2());
 end
 
 
 # Finally, the function declarations.
 def function1(j, k, l):
-    # Note that the param names do not have to match the names given
-    # during declaration. However, there still must be three params.
+    # Note that the param names do not have to match the names given during
+    # declaration. However, there must still be there params.
 
     if j < k:
         return 1;
     elif k < l:
-        return 3;
+        c = 9 + k - l;
+        return 3 * c;
     else:
         # p is only visible within the "else" and "end"
         p = j * 2 + k - l;
+        return p;
+    end
+end
+
+def function2():
+    # You can meddle with memory by using the "mem" operator.
+    mem(10) = 5;
+    mem(20) = 30;
+
+    # You can read from memory the same way.
+    # Of course, your code won't be this convoluted:
+    mem(mem(20))  =mem(21) * mem(22 + mem(33));
+
+    # A missing return will automatically insert a "return" statement at the end.
+    # There isn't really a procedure or void type. Not returning anything will
+    # just cause a garbage value to sit on the stack, that you can ignore. See
+    # function3.
+end
+
+def function3(a):
+
+    # The garbage value will be pushed to the stack and cleaned up. You do not
+    # have to worry about it.
+    function2();
+
+    i = 0;
+    while i < 20:
+        i = mem(i) + i * i;
     end
 
-    return 90;
+    return i;
 end
