@@ -35,7 +35,7 @@ LTHANEQ = '<='
 GTHANEQ = '>='
 DOUBLE_EQ = '=='
 
-VALUE_AT = 'value_at'
+MEM = 'mem'
 ADDRESS_OF = 'address_of'
 BLOCK = 'block'
 
@@ -57,11 +57,11 @@ LOAD_CC = '__load_cc__'
 COND_BRANCH = '__cond_branch__'
 BRANCH = '__branch__'
 SETUP_MAIN = '__setup_main__'
+MEM_ASSIGN = '__mem_assign__'
 
 class IRMachine1():
     def __init__(self):
         print('Creating IR....')
-        self.var_loc = {}
         self.memory = [randint(0, 2 ** 16) for i in range(10000)]
         self.sp = randint(0, 1000)
         self.fp = randint(0, 1000)
@@ -104,13 +104,14 @@ class IRMachine1():
             self.conditional_branch(operands, labels)
         elif operation == BRANCH:
             self.branch(operands, labels)
-
+        elif operation == MEM_ASSIGN:
+            self.mem_assign(operands)
         elif operation == EQUAL:
-            self.assign(operands) 
-        else:
+            self.assign(operands)
+        elif operation == MEM:
+            self.read_memory(operands)
 
-            if operation == EQUAL:
-                pass
+        else:
 
             vals = self._get_operand_values(operands)
 
@@ -170,20 +171,31 @@ class IRMachine1():
         self.pc = 0
 
         num_executed = 0
-        while (self.running):
-            operands, instruction = instructions[self.pc]
-            # print(self.pc, ':', operands, instruction)
+        while self.running:
             num_executed += 1
+            operands, instruction = instructions[self.pc]
+            # print(self.pc, ':', operands, instruction)       
             self.perform_operation(operands, instruction, labels, inv_labels)
+            # self.print_memory(0)
 
         print('Finished running. Executed {} instructions.'.format(num_executed))
 
     def print_memory(self, n):
 
-        print('\nPrinting memory:\n')
+        print('***************************\nPrinting memory:\n')
 
         for i in range(n):
             print(i, ':', self.memory[i])
+
+    def print_regs(self):
+        """
+        Print the "registers"
+        """
+        print('***************************\nPrinting regs:')
+        print('SP:', self.sp)
+        print('FP:', self.fp)
+        print('LINK:', self.link)
+        print('# PC:', self.pc)
 
     def setup_main(self):
         """
@@ -231,12 +243,15 @@ class IRMachine1():
     def assign(self, operands):
         """
         Assigns the value to the variable. The variable is assumed to exist.
+        Equal will eat things from the stack when necessary. This is meant
+        for variables. Writes to memory locations are handled by mem_assign.
         """
         t1, op1 = operands[0]
         t0, var = operands[1]
 
         if t1 == STACK_TOP:
             self.memory[self.fp + self.stack_frame[-1][var]] = self.memory[self.sp]
+            self.sp -= 1 # and POP
         elif t1 == ID:
             self.memory[self.fp + self.stack_frame[-1][var]] =\
                 self.memory[self.fp + self.stack_frame[-1][op1]]
@@ -245,6 +260,62 @@ class IRMachine1():
 
         self.pc += 1
 
+    def mem_assign(self, operands):
+        """
+        Handles writes to memory locations. In case the location is specified
+        by the top of the stack, the top of the stack is eaten.
+        """
+
+        t1, op1 = operands[0]
+        t0, loc = operands[1]
+
+        location = 0
+        pop_count = 0 # How many to pop
+
+        if t0 == STACK_TOP:
+            # When location specified by stack top. See note 11.
+            if t1 == STACK_TOP:
+                location = self.memory[self.sp - 1]
+            else:
+                location = self.memory[self.sp]
+            pop_count = 1
+        elif t0 == ID:
+            location = self.memory[self.fp + self.stack_frame[-1][loc]]
+        elif t0 == NUMBER:
+            location = loc
+
+        if t1 == STACK_TOP:
+            self.memory[location] = self.memory[self.sp]
+            pop_count += 1
+        elif t1 == ID:
+            self.memory[location] =\
+                self.memory[self.fp + self.stack_frame[-1][op1]]
+        elif t1 == NUMBER:
+            self.memory[location] = op1
+
+        self.sp -= pop_count
+        self.pc += 1
+
+    def read_memory(self, location):
+        """
+        Reads the value at the location specified by 'location', and then pushes
+        that value on to the stack. In case the location is specified by the
+        stack top, the stack size will remain unchanged.
+        """
+
+        t, op = location
+
+        if t == STACK_TOP:
+            self.memory[self.sp] = self.memory[self.memory[self.sp]]
+        elif t == ID:
+            self.sp += 1
+            self.memory[self.sp] =\
+                self.memory[self.fp + self.stack_frame[-1][op]]
+        elif t == NUMBER:
+            self.sp += 1
+            self.memory[self.sp] = self.memory[op]
+
+        self.pc += 1
 
     def pop(self):
         """

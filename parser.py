@@ -70,6 +70,7 @@ LOAD_CC = '__load_cc__'
 COND_BRANCH = '__cond_branch__'
 BRANCH = '__branch__'
 SETUP_MAIN = '__setup_main__'
+MEM_ASSIGN = '__mem_assign__' # not too sure if this is needed
 
 HIGHEST_PRECEDENCE = 500
 LOWEST_PRECEDENCE = 0
@@ -388,7 +389,6 @@ def parse(token_list=[]):
                     check_operands_exist(operands[:-1], variables, line_number)
                     check(not op_stack, 'Illegal statement.', line_number) # See note 3
                     c, v = operands[-1]
-                    print(c, v)
                     check(c == ID or c == MEM_LOC, 'Cannot assign value to a literal.', line_number)
                     if c == ID and v not in variables:
                         # Create the variable
@@ -396,11 +396,10 @@ def parse(token_list=[]):
                         vars_this_block[-1].append(v)
                         created_vars = created_vars + 1
                         variables[v] = 0
-                        continue
-                    ir_form.append((operands, operation))
-
-                    # Without this line the semi-colon operator won't know whether to issue a POP.
-                    num_stack.append(operands[0]) 
+                    elif c == MEM_LOC:
+                        ir_form.append(([operands[0], v], MEM_ASSIGN))
+                    else:
+                        ir_form.append((operands, operation))
                     continue
                 else:
                     check_operands_exist(operands, variables, line_number)

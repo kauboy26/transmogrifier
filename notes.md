@@ -32,7 +32,7 @@ The curr_scope_type is to keep track of the innermost scope we're in (are we in 
 ## Note 5
 The meaning of CREATE:  
 CREATE, to the IRMachine, means if the second operand is not the stack top ($): claim space for the new variable, and set the value to whavever it should be. If the second oeprand is the top of the stack: claim space (by eating up the top of the stack) and mark this assign this space to the new variable.  
-Also EQUAL does not eat things from the top of the stack! That is, IT WILL BE FOLLOWED BY A POP when necessary.
+Also EQUAL will EAT THINGS from the stack!
 
 ## Note 6
 If stacktop, then something was pushed on to the stack as a result of an operation. Otherwise a statement like "4;" was encountered, and nothing needs to be done.
@@ -47,6 +47,11 @@ More than one label can map to an instruction. This was to solve the "last elif"
 
 ## Note 9
 The FETCH_RV instruction has a list of operands. This is simply the list of params, so the IRMachine knows how many params to pop off the stack. The actual contents of the list DO NOT MATTER!
+
+## Note 10
+The instruction MEM_ASSIGN is the memory counterpart of assign (equal operator). It will eat the stack, if the location to be assigned to is determined by a value previously pushed on to the stack.  
+
+The MEM instruction, though it looks like a function if you look at the syntax, isn't really a function. It is actually just another operation like addition or subtraction. Therefore, it doesn't require arguments to be pushed on to the stack, arguments to be popped off the stack, return values to be fetched, return addresses to be saved, etc.
 
 # Other issues
 
