@@ -174,17 +174,17 @@ class IRMachine1():
         while self.running:
             num_executed += 1
             operands, instruction = instructions[self.pc]
-            # print(self.pc, ':', operands, instruction)       
+            print(self.pc, ':', operands, instruction)       
             self.perform_operation(operands, instruction, labels, inv_labels)
-            # self.print_memory(0)
+            self.print_regs()
+            
 
         print('Finished running. Executed {} instructions.'.format(num_executed))
 
-    def print_memory(self, n):
 
+    def print_memory(self, low, high):
         print('***************************\nPrinting memory:\n')
-
-        for i in range(n):
+        for i in range(low, high):
             print(i, ':', self.memory[i])
 
     def print_regs(self):
@@ -256,7 +256,7 @@ class IRMachine1():
             self.memory[self.fp + self.stack_frame[-1][var]] =\
                 self.memory[self.fp + self.stack_frame[-1][op1]]
         elif t1 == NUMBER:
-            self.memory[self.stack_frame[-1][var]] = op1
+            self.memory[self.fp + self.stack_frame[-1][var]] = op1
 
         self.pc += 1
 
@@ -284,6 +284,8 @@ class IRMachine1():
         elif t0 == NUMBER:
             location = loc
 
+        
+
         if t1 == STACK_TOP:
             self.memory[location] = self.memory[self.sp]
             pop_count += 1
@@ -292,6 +294,8 @@ class IRMachine1():
                 self.memory[self.fp + self.stack_frame[-1][op1]]
         elif t1 == NUMBER:
             self.memory[location] = op1
+
+        print('Write location:', location, ', value:', self.memory[location])
 
         self.sp -= pop_count
         self.pc += 1
@@ -305,16 +309,20 @@ class IRMachine1():
 
         t, op = location
 
+        value = 0
+        loc = 0
+
         if t == STACK_TOP:
-            self.memory[self.sp] = self.memory[self.memory[self.sp]]
+            loc = self.memory[self.sp]
         elif t == ID:
             self.sp += 1
-            self.memory[self.sp] =\
-                self.memory[self.fp + self.stack_frame[-1][op]]
+            loc = self.memory[self.fp + self.stack_frame[-1][op]]
         elif t == NUMBER:
             self.sp += 1
-            self.memory[self.sp] = self.memory[op]
+            loc = op
 
+        self.memory[self.sp] = self.memory[loc]
+        print('Read location:', loc, ', value:', self.memory[self.sp])
         self.pc += 1
 
     def pop(self):
