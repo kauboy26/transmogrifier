@@ -174,9 +174,9 @@ class IRMachine1():
         while self.running:
             num_executed += 1
             operands, instruction = instructions[self.pc]
-            print(self.pc, ':', operands, instruction)       
+            # print(self.pc, ':', operands, instruction)       
             self.perform_operation(operands, instruction, labels, inv_labels)
-            self.print_regs()
+            # self.print_regs()
             
 
         print('Finished running. Executed {} instructions.'.format(num_executed))
@@ -295,7 +295,7 @@ class IRMachine1():
         elif t1 == NUMBER:
             self.memory[location] = op1
 
-        print('Write location:', location, ', value:', self.memory[location])
+        # print('Write location:', location, ', value:', self.memory[location])
 
         self.sp -= pop_count
         self.pc += 1
@@ -322,7 +322,7 @@ class IRMachine1():
             loc = op
 
         self.memory[self.sp] = self.memory[loc]
-        print('Read location:', loc, ', value:', self.memory[self.sp])
+        # print('Read location:', loc, ', value:', self.memory[self.sp])
         self.pc += 1
 
     def pop(self):
