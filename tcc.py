@@ -1,3 +1,7 @@
+"""
+Transmogrifier, the Chummy Compiler (haha good one)
+"""
+
 import sys
 
 from lexer import tokenize

@@ -1,6 +1,5 @@
 from random import randint
-
-from miscell import check
+from core.miscell import check
 
 # I will use these constants to save myself some trouble in
 # typing. Sublime's autocompletion feature my friend.

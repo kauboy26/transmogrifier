@@ -3,7 +3,12 @@ main:
     a = 1;
     b = a * -a - 89;
     b = -b - b;
-end'''
+
+    # Assert these:
+    mem(50) = a;
+    mem(51) = b;
+end
+'''
 
 samp2 = '''
 main:
@@ -13,7 +18,16 @@ main:
     b = (a + c ) * (a - c);
     d = a * a - c * c;
     equal = b == d;
-end'''
+
+    # Assert
+    mem(50) = a;
+    mem(51) = b;
+    mem(52) = c;
+    mem(53) = d;
+    mem(54) = equal;
+
+end
+'''
 
 
 
@@ -24,7 +38,11 @@ declare sum(n);
 declare fact(n);
 
 main:
-    fact(12);
+    a = fact(12);
+
+    # Assert
+    mem(100) = sum(20);
+    mem(101) = a;
 end
 
 def sum(n):
@@ -46,12 +64,31 @@ end
 '''
 
 samp5 = '''
+
+declare f(a, b);
+
 main:
     a = 1 + 1 + 1;
     a = 1;
     a = 1 + 1;
     e = 2;
     e = a + 999;
+
+    a = 1 + 1 + 1;
+    b = 30;
+
+    f(a, b);
+
+    if mem(50) == 50:
+        i = 1;
+    end
+
+    # Assert mem(50) = 50
+end
+
+def f(a, b):
+    # basically does mem(50) = 50;
+    mem(a + b + 9 * 2 - 1 + mem(102 + mem(21) * 0) * (0) + 0) = 50; 
 end
 '''
 
@@ -64,12 +101,36 @@ declare func1(a, b, c);
 declare f(fa);
 declare func2(a, b);
 
+declare is_prime(n);
+
 main:
     # b = f(5);
     # a = func1(1, 2, f(func2(1, b))) * func2(2, 3);
     c = 1;
     c = 2 + 2;
     c = 1;
+
+    mem(38) = 101;
+
+    # assert mem(50) == 1 (101 is prime)
+    mem(50) = is_prime(mem(38));
+end
+
+def is_prime(num):
+
+    prime = 1;
+
+    i = 2;
+    while i * i < num:
+        if num %% i == 0:
+            prime = 0;
+            i = num; # to exit the loop
+        end
+
+        i = i + 1
+    end
+
+    return prime;
 end
 
 def func1(hello, mr, sky):
@@ -87,11 +148,13 @@ end
 
 
 
-samp6 = '''main:
-value_at(1 + 1) = 0;
-# value_at(1) = 1;
-# value_at(2) = 2;
-# value_at(1 + 1 - 3 + 4) = 3;
+samp6 = '''
+main:
+    mem(10) = 20;
+    mem(20) = 10;
+    mem(mem(mem(10))) = mem(10) * mem(10);
+
+    # assert mem(10) == 400
 end
 '''
 
@@ -125,7 +188,10 @@ def fact(n):
         return -1;
     elif n < 0:
         return 1000;
+    else:
+        return 100000;
     end
+
     return 1;
 end
 
@@ -142,15 +208,14 @@ def trial(a, b, c):
 end
 '''
 
-
-
-
-
 samp8 = '''
 declare fact(n);
 
 main:
-    a = fact(7);
+    a = 9;
+    mem(a) = fact(a - 1) / fact(a - 2) - 8 / 1;
+
+    # Assert mem(9) == 0
 end
 
 def fact(n):

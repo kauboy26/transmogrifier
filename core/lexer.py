@@ -4,7 +4,7 @@ as possible over here before stuff is passed over to the parser. The
 "tokenize" method will tokenize a string, for consumption by the parser.
 """
 
-from miscell import check
+from core.miscell import check
 
 keywords = {'def': 0, 'if': 0, 'elif': 0,
         'else': 0, 'while': 0, 'end': 0,
