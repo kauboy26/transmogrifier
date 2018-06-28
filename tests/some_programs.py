@@ -4,9 +4,13 @@ main:
     b = a * -a - 89;
     b = -b - b;
 
-    # Assert these:
+    
     mem(50) = a;
     mem(51) = b;
+
+    # assert
+    # mem(50) == 1
+    # mem(51) == 180
 end
 '''
 
@@ -20,11 +24,11 @@ main:
     equal = b == d;
 
     # Assert
-    mem(50) = a;
-    mem(51) = b;
-    mem(52) = c;
-    mem(53) = d;
-    mem(54) = equal;
+    mem(50) = a; # -90
+    mem(51) = b; # -1700
+    mem(52) = c; # 80
+    mem(53) = d; # -1700
+    mem(54) = equal; # 1
 
 end
 '''
@@ -32,17 +36,17 @@ end
 
 
 
-samp4 = '''
+samp3 = '''
 
 declare sum(n);
 declare fact(n);
 
 main:
-    a = fact(12);
+    a = fact(8);
 
     # Assert
-    mem(100) = sum(20);
-    mem(101) = a;
+    mem(100) = sum(20); # 210
+    mem(101) = a;       # 40320
 end
 
 def sum(n):
@@ -63,7 +67,7 @@ def fact(n):
 end
 '''
 
-samp5 = '''
+samp4 = '''
 
 declare f(a, b);
 
@@ -87,6 +91,7 @@ main:
 end
 
 def f(a, b):
+    waht = 90 * a * b;
     # basically does mem(50) = 50;
     mem(a + b + 9 * 2 - 1 + mem(102 + mem(21) * 0) * (0) + 0) = 50; 
 end
@@ -96,7 +101,7 @@ end
 
 
 
-samp3 = '''
+samp5 = '''
 declare func1(a, b, c);
 declare f(fa);
 declare func2(a, b);
@@ -233,17 +238,28 @@ samp9 = '''
 declare fibo(n);
 
 main:
-    fibo(20);
+    a = fibo(9) + fibo(8);
+    b = fibo(10);
+
+    if a == b:
+        mem(100) = 1;
+    else:
+        mem(100) = 0;
+    end
+
+    # Assert mem(100) == 1
 end
 
 def fibo(n):
-    if n > 2:
-        return fibo(n - 1) + fibo(n - 2) + fibo(n - 3);
-    elif n == 2:
-        return 1;
-    else:
-        return 0;
+    g = mem(9);
+    k = mem(10);
+    l = mem(n + 100);
+
+    if n > 1:
+        return fibo(n - 1) + fibo(n - 2);
     end
+
+    return 1;
 end    
 '''
 
@@ -259,6 +275,18 @@ declare tribo(n);
 
 main:
     a = tribo(20);
+    b = tribo(20 - 1) + tribo(20 - 2) + tribo(400 / 20 - 3 + tribo(5) * tribo(6) * tribo(7) * 0);
+    b = b + a - a;
+
+    if b - a:
+        mem(100) = 999;
+    elif 1:
+        mem(100) = 0;
+    else:
+        mem(100) = 8;
+    end
+
+    # assert mem(100) == 0
 end
 
 def tribo(n):
@@ -296,8 +324,14 @@ end
 samp11 = '''
 
 main:
-    mem(22) = 666;
-    mem(23) = 666;
+    i = 5;
+
+    while i < 500:
+        mem(i) = 0;
+        i = i + 1;
+    end
+
+    # Assert mem[5:500] == 0
 end
 
 '''
@@ -305,9 +339,14 @@ end
 samp12 = '''
 
 main:
-    mem(10) = 5;
-    mem(mem(10)) = 666;
-    mem(mem(mem(10))) = 1000;
+    
+    i = 5;
+    while i < 100:
+        mem(i) = i;
+        i = i + 1;
+    end
+
+    # Assert mem[5:100] are consecutive ints
 end
 
 '''
@@ -337,6 +376,8 @@ main:
         mem(mem(a)) = 0;
         mem(a) = mem(100) + 1;
     end
+
+    # Assert mem[5:25] is 0
 end
 
 '''
@@ -344,11 +385,18 @@ end
 samp15 = '''
 
 # Bubble sort
+declare bsort(start, length);
 
 main:
     start = 10;
-    length = 200;
+    length = 50;
 
+    bsort(start, length);
+
+    # Assert mem[10:60] is sorted
+end
+
+def bsort(start, length):
     j = 0;
     i = 0;
     temp = 0;
@@ -368,7 +416,9 @@ main:
 
         j = j + 1;
     end
-
-end   
-
+end
 '''
+
+samps = [   samp1, samp2, samp3, samp4, samp5, samp6,\
+            samp7, samp8, samp9, samp10, samp11, samp12,\
+            samp13, samp14, samp15]
