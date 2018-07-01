@@ -9,6 +9,8 @@ NEWLINE = 5
 COMMENT = 6
 
 STACK_TOP = 8
+MEM_LOC = 9
+ADDRESS = 10
 
 AND = 'and'
 OR = 'or'
@@ -63,8 +65,8 @@ class IRMachine1():
     def __init__(self):
         print('Creating IR....')
         self.memory = [randint(0, 2 ** 16) for i in range(10000)]
-        self.sp = randint(0, 1000)
-        self.fp = randint(0, 1000)
+        self.sp = randint(-1000, 1000)
+        self.fp = randint(-1000, 1000)
         self.stack_frame = [{} for i in range(randint(0, 10))]
         self.running = True
         self.pc = 0
@@ -564,6 +566,8 @@ class IRMachine1():
                 vals.append(self.memory[self.fp + self.stack_frame[-1][op]])
             elif t == NUMBER:
                 vals.append(op)
+            elif t == ADDRESS:
+                vals.append(self.fp + self.stack_frame[-1][op])
 
 
         # Makee stack pointer point to where it should be pointing after popping

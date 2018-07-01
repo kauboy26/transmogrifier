@@ -14,6 +14,8 @@ COMMENT = 6
 STACK_TOP = 8
 MEM_LOC = 9
 
+ADDRESS = 10
+
 AND = 'and'
 OR = 'or'
 NOT = 'not'
@@ -420,7 +422,10 @@ def parse(token_list=[]):
                             ir_form.append((operands[0], operation))
                             num_stack.append((STACK_TOP, '$'))
                         elif operation == ADDRESS_OF:
-                            pass
+                            c, v = operands[0]
+                            check(c == ID, 'Cannot find the address of a non-variable.', line_number)
+                            num_stack.append((ADDRESS, v))
+
                         continue
 
                     ir_form.append((operands, PUSH))

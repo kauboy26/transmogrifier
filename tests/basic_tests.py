@@ -189,5 +189,37 @@ class MassMemoryOpsUnittests(unittest.TestCase):
 
         self.assertEqual(machine.sp, -1)
 
+
+class AddressOfSimpleUnittests(unittest.TestCase):
+
+
+    def test_incrementVariable(self):
+
+        machine = IRMachine1()
+
+        instructions, labels, inv_lbl = parse(tokenize(sp.samp18))
+        machine.run(instructions, labels, inv_lbl)
+
+        self.assertEqual(machine.memory[0], 2)
+
+    def test_swap(self):
+
+        machine = IRMachine1()
+
+        instructions, labels, inv_lbl = parse(tokenize(sp.samp16))
+        machine.run(instructions, labels, inv_lbl)
+
+        self.assertEqual(machine.memory[50], 100)
+        self.assertEqual(machine.memory[51], -1)
+
+    def test_memFactorial(self):
+
+        machine = IRMachine1()
+
+        instructions, labels, inv_lbl = parse(tokenize(sp.samp17))
+        machine.run(instructions, labels, inv_lbl)
+
+        self.assertEqual(machine.memory[100], 40320)
+
 if __name__ == '__main__':
     unittest.main()

@@ -430,6 +430,73 @@ def bsort(start, length):
 end
 '''
 
+
+samp16 = '''
+
+declare swap(a, b);
+
+main:
+    a = -1;
+    b = 100;
+
+    swap(addrOf(a), addrOf(b));
+
+    mem(50) = a; # 100
+    mem(51) = b; # -1
+end
+
+define swap(addr1, addr2):
+    temp = mem(addr1);
+    mem(addr1) = mem(addr2);
+    mem(addr2) = temp;
+end
+'''
+
+
+
+
+
+
+samp17 = '''
+
+declare mem_fact(addr_op, addr_val);
+
+main:
+    a = 8;
+    fact_a = 1;
+
+    mem_fact(addrOf(a), addrOf(fact_a));
+
+    mem(100) = fact_a; # assert 40320
+end
+
+def mem_fact(addr_op, addr_val):
+    if mem(addr_op) > 1:
+        val = mem(addr_val);
+        val = val * mem(addr_op);
+        mem(addr_val) = val;
+        mem(addr_op) = mem(addr_op) - 1;
+
+        mem_fact(addr_op, addr_val);
+    end
+end
+
+'''
+
+samp18 = '''
+declare increment(a);
+
+main:
+    a = 1;
+    increment(addrOf(a));
+end
+
+def increment(a):
+    mem(a) = mem(a) + 1;
+end
+'''
+
+
 samps = [   samp1, samp2, samp3, samp4, samp5, samp6,\
             samp7, samp8, samp9, samp10, samp11, samp12,\
             samp13, samp14, samp15]
