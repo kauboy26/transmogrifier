@@ -29,7 +29,7 @@ end
 # Finally, the function declarations.
 def function1(j, k, l):
     # Note that the param names do not have to match the names given during
-    # declaration. However, there must still be there params.
+    # declaration. However, there must still be three params.
 
     if j < k:
         return 1;
@@ -52,7 +52,7 @@ def function2():
     # Of course, your code won't be this convoluted:
     mem(mem(20))  =mem(21) * mem(22 + mem(33));
 
-    # A missing return will automatically insert a "return" statement at the end.
+    # The compiler will automatically insert a "return" statement at the end.
     # There isn't really a procedure or void type. Not returning anything will
     # just cause a garbage value to sit on the stack, that you can ignore. See
     # function3.

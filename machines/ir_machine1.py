@@ -120,37 +120,38 @@ class IRMachine1():
             elif operation == B_NOT:
                 val = int(~op0)
 
-            op0 = vals[1]
-            op1 = vals[0]
+            else:
+                op0 = vals[1]
+                op1 = vals[0]
 
-            if operation == PLUS:
-                val = op0 + op1
-            elif operation == MINUS:
-                val = op0 - op1
-            elif operation == MULTI:
-                val = op0 * op1
-            elif operation == DIVIS:
-                val = op0 / op1
-            elif operation == MODULO:
-                val = op0 % op1
-            elif operation == AND:
-                val = int(op0 and op1)
-            elif operation == OR:
-                val = int(op0 or op1)
-            elif operation == GTHAN:
-                val = int(op0 > op1)
-            elif operation == LTHAN:
-                val = int(op0 < op1)
-            elif operation == DOUBLE_EQ:
-                val = int(op0 == op1)
-            elif operation == LTHANEQ:
-                val = int(op0 <= op1)
-            elif operands == GTHANEQ:
-                val = int(op0 >= op1)
-            elif operands == B_AND:
-                val = int(op0 & op1)
-            elif operands == B_OR:
-                val = int(op0 | op1)
+                if operation == PLUS:
+                    val = op0 + op1
+                elif operation == MINUS:
+                    val = op0 - op1
+                elif operation == MULTI:
+                    val = op0 * op1
+                elif operation == DIVIS:
+                    val = op0 / op1
+                elif operation == MODULO:
+                    val = op0 % op1
+                elif operation == AND:
+                    val = int(op0 and op1)
+                elif operation == OR:
+                    val = int(op0 or op1)
+                elif operation == GTHAN:
+                    val = int(op0 > op1)
+                elif operation == LTHAN:
+                    val = int(op0 < op1)
+                elif operation == DOUBLE_EQ:
+                    val = int(op0 == op1)
+                elif operation == LTHANEQ:
+                    val = int(op0 <= op1)
+                elif operands == GTHANEQ:
+                    val = int(op0 >= op1)
+                elif operands == B_AND:
+                    val = int(op0 & op1)
+                elif operands == B_OR:
+                    val = int(op0 | op1)
 
             self.sp += 1
 

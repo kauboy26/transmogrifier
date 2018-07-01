@@ -4,13 +4,20 @@ main:
     b = a * -a - 89;
     b = -b - b;
 
-    
+    c = not a * b;
+
+    d = 1 * 9 - 9 or 0 and not 1 * 5 < 6 or not not not not a;
+
     mem(50) = a;
     mem(51) = b;
+    mem(52) = c;
+    mem(53) = d;
 
     # assert
     # mem(50) == 1
     # mem(51) == 180
+    # mem(52) == 0
+    # mem(53) == 1
 end
 '''
 
@@ -98,9 +105,6 @@ end
 '''
 
 
-
-
-
 samp5 = '''
 declare func1(a, b, c);
 declare f(fa);
@@ -119,6 +123,7 @@ main:
 
     # assert mem(50) == 1 (101 is prime)
     mem(50) = is_prime(mem(38));
+    mem(51) = is_prime(mem(50) * 128); # 0
 end
 
 def is_prime(num):
@@ -126,13 +131,15 @@ def is_prime(num):
     prime = 1;
 
     i = 2;
+
     while i * i < num:
-        if num %% i == 0:
+
+        if num % i == 0:
             prime = 0;
             i = num; # to exit the loop
         end
 
-        i = i + 1
+        i = i + 1;
     end
 
     return prime;
@@ -224,7 +231,11 @@ main:
 end
 
 def fact(n):
+
+    i = n;
+
     if n > 0:
+        i = i + 1;
         return n * fact(n - 1);
     else:
         return 1;
