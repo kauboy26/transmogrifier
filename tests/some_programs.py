@@ -516,6 +516,140 @@ def h(a, b):
 end
 '''
 
+samp20 = '''
+
+declare len(a);
+declare asce(a);
+
+main:
+    a = array(10);
+    asce(a);
+    b = array(len(a) * 2);
+    asce(b);
+
+    # Assert that a has consecutive ints within it
+
+end
+
+def len(a):
+    return mem(a - 1);
+end
+
+def asce(a):
+    i = 0;
+
+    k = array(len(a) * 3);
+
+    while i < len(a):
+        mem(a + i) = i;
+        i = i + 1;
+    end
+end
+
+'''
+
+samp21 = '''
+
+declare rando();
+
+main:
+    n = 10;
+
+    orig = array(n);
+
+    first_half = array(n / 2);
+    sec_half = array(n  - n / 2);
+end
+
+def rando():
+    cool = array(20);
+
+    i = 0;
+    while i < 20:
+        mem(cool + i) = array(10);
+    end
+end
+
+'''
+
+samp22 = '''
+
+declare ms(a);
+declare len(a);
+
+main:
+    arr = array(100);
+
+    ms(arr);
+
+
+end
+
+def ms(a):
+
+    length = len(a);
+
+    if length < 2:
+        return;
+    end
+
+    fh = array(length / 2);
+    sh = array(length - length / 2);
+
+    i = 0;
+    j = 0;
+
+
+    # there's a lot of unneccessary function calling
+    # to ensure that the language works.
+
+    while i < len(fh):
+        mem(fh + i) = mem(a + i);
+        i = i + 1;
+    end
+
+    while j < len(sh):
+        mem(sh + j) = mem(a + i + j);
+        j = j + 1;
+    end 
+
+    ms(fh);
+    ms(sh);
+
+    # Now merge them together
+
+    i = 0;
+    j = 0;
+
+
+    while i < len(fh) and j < len(sh):
+        if mem(fh + i) <= mem(sh + j):
+            mem(a + i + j) = mem(fh + i);
+            i = i + 1;
+        else:
+            mem(a + i + j) = mem(sh + j);
+            j = j + 1;
+        end
+    end
+
+    while i < len(fh):
+        mem(a + i + j) = mem(fh + i);
+        i = i + 1;
+    end
+
+    while j < len(sh):
+        mem(a + i + j) = mem(sh + j);
+        j = j + 1;
+    end
+
+end
+
+def len(a):
+    return mem(a - 1);
+end
+
+'''
+
 samps = [   samp1, samp2, samp3, samp4, samp5, samp6,\
             samp7, samp8, samp9, samp10, samp11, samp12,\
             samp13, samp14, samp15]

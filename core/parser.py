@@ -18,22 +18,22 @@ def parse(token_list=[]):
                     COLON: 70,
                     LPAREN: 0, RPAREN: 1,
                     # functions:
-                    MEM: 200, ADDRESS_OF: 200, BLOCK: 200, PRINT: 200, INJECT: 200}
+                    MEM: 200, ADDRESS_OF: 200, ARRAY: 200, PRINT: 200, INJECT: 200}
 
 
     args_needed = {MULTI: 2, DIVIS: 2, MODULO: 2, PLUS: 2, MINUS: 2, NOT: 1,
                     AND: 2, OR: 2, LTHAN: 2, GTHAN: 2, GTHANEQ: 2, LTHANEQ: 2,
                     DOUBLE_EQ: 2, EQUAL: 2,
                     MEM: 1, ADDRESS_OF: 1,
-                    BLOCK: 1, PRINT: 1, INJECT: 1}
+                    ARRAY: 1, PRINT: 1, INJECT: 1}
 
-    primitive_functions = {MEM: 0, ADDRESS_OF: 0, BLOCK: 0, PRINT: 0,
+    primitive_functions = {MEM: 0, ADDRESS_OF: 0, ARRAY: 0, PRINT: 0,
                             INJECT: 0}
 
     effect_of = {MULTI: -1, DIVIS: -1, MODULO: -1, PLUS: -1, MINUS: -1, NOT: 0,
                     AND: -1, OR: -1, LTHAN: -1, GTHAN: -1, GTHANEQ: -1, LTHANEQ: -1,
                     DOUBLE_EQ: -1, EQUAL: -1, MEM: 0, ADDRESS_OF: 0,
-                    BLOCK: 0, PRINT: 0, INJECT: 0}
+                    ARRAY: 0, PRINT: 0, INJECT: 0}
 
     line_number = 1
     labels = {}
@@ -230,7 +230,7 @@ def parse(token_list=[]):
 
                     vars_to_clean = func_help[MAIN_FUNC]
                     if vars_to_clean:
-                        ir_form.append((vars_to_clean, DESTROY_VARS))
+                        ir_form.append((vars_to_clean, CLEAN_MAIN))
                         
                     ir_form.append((None, HALT))
                     proc_func = False
@@ -319,9 +319,13 @@ def parse(token_list=[]):
                     check_operands_exist(operands[:-1], variables, line_number)
                     check(not op_stack, 'Illegal statement.', line_number) # See note 3
                     c, v = operands[-1]
+                    c1, v1 = operands[0]
                     check(c == ID or c == MEM_LOC, 'Cannot assign value to a literal.', line_number)
                     if c == MEM_LOC:
-                        ir_form.append(([operands[0], v], MEM_ASSIGN))
+                        if c1 == ARR_TYPE:
+                            ir_form.append(([v1, v], MEM_ARR_ASSIGN))
+                        else:
+                            ir_form.append(([operands[0], v], MEM_ASSIGN))
                     else:
                         if v not in variables:
                             # note 12
@@ -331,11 +335,16 @@ def parse(token_list=[]):
                             if v not in vars_of_func:
                                 func_help[curr_func].append(v)
                                 vars_of_func[v] = 0
-                        ir_form.append((operands, operation))
+                        if c1 == ARR_TYPE:
+                            ir_form.append(([v1, operands[1]], ARR_ASSIGN))
+                        else:
+                            ir_form.append((operands, operation))
 
                     continue
                 else:
                     check_operands_exist(operands, variables, line_number)
+
+                validate_operation(operands, line_number)
 
                 if operation in functions or operation in primitive_functions:
                     args_found = args_count_stack.pop()
@@ -357,6 +366,10 @@ def parse(token_list=[]):
                             c, v = operands[0]
                             check(c == ID, 'Cannot find the address of a non-variable.', line_number)
                             num_stack.append((ADDRESS, v))
+                        elif operation == ARRAY:
+                            c, v = operands[0]
+                            check(c != ARR_TYPE, 'Array arguments bad.', line_number)
+                            num_stack.append((ARR_TYPE, operands[0]))
 
                         continue
 
@@ -414,8 +427,9 @@ def parse(token_list=[]):
                         ret_statement = False
                     elif c == STACK_TOP:
                         ir_form.append((None, POP)) # See Note 6
-                else:
-                    check(not ret_statement, '"return" must return something.', line_number)
+                elif ret_statement:
+                    ret_statement = False
+                    ir_form.append((None, R_TOCALLER))
             elif value == COLON:
                 check(proc_cond_header, 'Illegal use of ":".', line_number)
                 check(not op_stack, 'Illegal statement, unexpected ":".', line_number)
@@ -448,6 +462,15 @@ def parse(token_list=[]):
     check(not op_stack and not num_stack, 'Missing semicolon?', line_number)
 
     return ir_form, labels, ln_to_label, func_help
+
+def validate_operation(operands, line_number):
+    """
+    Makes sure the operation is valid for those operands.
+    """
+    for c, v in operands:
+        check(c != MEM_LOC and c != ARR_TYPE,
+            'Invalid operands for operation. Found unexpected'
+            ' memory location or array.', line_number)
 
 
 def check_operands_exist(operands, variables, line_number):

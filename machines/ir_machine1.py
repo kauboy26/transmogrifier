@@ -4,9 +4,9 @@ from core.constants import *
 class IRMachine1():
     def __init__(self):
         print('Creating IR....')
-        self.seed = 23232
+        self.seed = randint(-1000, 1000)
         seed(self.seed)
-        self.memory = [randint(-500, 2 ** 16) for i in range(10000)]
+        self.memory = [randint(-2 ** 16, 2 ** 16) for i in range(10000)]
         self.sp = randint(-1000, 1000)
         self.fp = randint(-1000, 1000)
         self.stack_frame = [{} for i in range(randint(0, 10))]
@@ -30,8 +30,8 @@ class IRMachine1():
             self.halt()
         elif operation == SETUP_FUNC:
             self.setup_func(operands)
-        elif operation == DESTROY_VARS:
-            self.destroy_vars(operands)
+        elif operation == CLEAN_MAIN:
+            self.clean_main(operands)
         elif operation == JROUTINE:
             self.jump_to_routine(operands, labels)
         elif operation == R_TOCALLER:
@@ -52,6 +52,10 @@ class IRMachine1():
             self.assign(operands)
         elif operation == MEM:
             self.read_memory(operands)
+        elif operation == MEM_ARR_ASSIGN:
+            self.mem_arr_assign(operands)
+        elif operation == ARR_ASSIGN:
+            self.arr_assign(operands)
 
         else:
 
@@ -75,7 +79,7 @@ class IRMachine1():
                 elif operation == MULTI:
                     val = op0 * op1
                 elif operation == DIVIS:
-                    val = op0 / op1
+                    val = int(op0 / op1)
                 elif operation == MODULO:
                     val = op0 % op1
                 elif operation == AND:
@@ -103,6 +107,22 @@ class IRMachine1():
 
             self.pc += 1
 
+    def debug(self, instructions, labels, inv_labels, func_help):
+
+        print('Debug...')
+        self.func_help = func_help
+        self.pc = 0
+
+        num_executed = 0
+        while not input() and self.running:
+            num_executed += 1
+            operands, instruction = instructions[self.pc]
+            print(self.pc, ':', operands, instruction)       
+            self.perform_operation(operands, instruction, labels, inv_labels)
+            self.print_regs()
+            
+
+        print('Finished running. Executed {} instructions.'.format(num_executed))
 
     def run(self, instructions, labels, inv_labels, func_help):
         """
@@ -129,7 +149,7 @@ class IRMachine1():
     def print_memory(self, low, high):
         print('***************************\nPrinting memory:\n')
         for i in range(low, high):
-            print(i, ':', self.memory[i])
+            print('{:4} : {:6}'.format(i, self.memory[i]))
 
     def print_regs(self):
         """
@@ -244,6 +264,86 @@ class IRMachine1():
         # print('Read location:', loc, ', value:', self.memory[self.sp])
         self.pc += 1
 
+    def mem_arr_assign(self, operands):
+        """
+        Creates an array on the stack, and puts the pointer to that array
+        into the location specified by the memory location.
+        """
+
+        t1, op1 = operands[0]
+        t0, loc = operands[1]
+
+        length = 0
+        location = 0
+        pop_count = 0 # How many to pop
+
+        if t0 == STACK_TOP:
+            # When location specified by stack top. See note 11.
+            if t1 == STACK_TOP:
+                location = self.memory[self.sp - 1]
+            else:
+                location = self.memory[self.sp]
+            pop_count = 1
+        elif t0 == ID:
+            location = self.memory[self.fp + self.stack_frame[-1][loc]]
+        elif t0 == NUMBER:
+            location = loc
+        
+
+        if t1 == STACK_TOP:
+            length = self.memory[self.sp]
+            pop_count += 1
+        elif t1 == ID:
+            length = self.memory[self.fp + self.stack_frame[-1][op1]]
+        elif t1 == NUMBER:
+            length = op1
+
+        # print('Write location:', location, ', value:', self.memory[location])
+
+        self.sp -= pop_count
+
+        # Now we have the length and location.
+
+        # put the length on the stack
+        self.sp += 1
+        self.memory[self.sp] = length
+
+        # get the pointer to the array
+        pointer = self.sp + 1
+        self.sp += length
+
+        self.memory[location] = pointer
+
+        self.pc += 1
+
+    def arr_assign(self, operands):
+        """
+        Creates an array on the stack and puts the pointer to that array
+        into the specified variable.
+        """
+
+        t1, op1 = operands[0]
+        t0, var = operands[1]
+
+
+        if t1 == STACK_TOP:
+            # then the length is already in the right place
+            length = self.memory[self.sp]
+        else:
+            if t1 == ID:
+                length = self.memory[self.fp + self.stack_frame[-1][op1]]
+            elif t1 == NUMBER:
+                length = op1
+            self.sp += 1
+            self.memory[self.sp] = length
+
+        pointer = self.sp + 1
+        self.sp += length
+
+        self.memory[self.fp + self.stack_frame[-1][var]] = pointer
+
+        self.pc += 1
+
     def pop(self):
         """
         Pops the stack (doesn't clean up garbage, stack will remain dirty)
@@ -321,23 +421,22 @@ class IRMachine1():
         # print(self.stack_frame)
         self.pc += 1
 
-    def destroy_vars(self, operands):
+    def clean_main(self, operands):
         """
         Cleans up the main method, by reclaiming stack space.
         """
 
-        print('Deleting variables:')
+        print('Cleaning main method:')
 
         num_to_del = len(operands)
 
         # Remove from stack frame
-        curr_frame = self.stack_frame[-1]
+        curr_frame = self.stack_frame.pop()
         for var in operands:
             print('{} : {}'.format(var, self.memory[self.fp + curr_frame[var]]))
-            del curr_frame[var]
 
-        # reclaim stack space
-        self.sp -= num_to_del
+        # Reset to original position
+        self.sp = -1
 
         self.pc += 1
 

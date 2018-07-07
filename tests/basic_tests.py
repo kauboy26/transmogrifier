@@ -185,7 +185,7 @@ class MassMemoryOpsUnittests(unittest.TestCase):
         machine.run(instructions, labels, inv_lbl, func_help)
 
         for i in range(20, 99):
-            self.assertTrue(machine.memory[i] < machine.memory[i + 1], 'Mem loc: {}'.format(i))
+            self.assertTrue(machine.memory[i] <= machine.memory[i + 1], 'Mem loc: {}'.format(i))
 
         self.assertEqual(machine.sp, -1)
 
@@ -220,6 +220,42 @@ class AddressOfSimpleUnittests(unittest.TestCase):
         machine.run(instructions, labels, inv_lbl, func_help)
 
         self.assertEqual(machine.memory[100], 40320)
+
+class ArraySimpleTests(unittest.TestCase):
+
+    def test_makeAscending(self):
+        machine = IRMachine1()
+
+        instructions, labels, inv_lbl, func_help = parse(tokenize(sp.samp20))
+        machine.run(instructions, labels, inv_lbl, func_help)
+
+        a = machine.memory[0]
+
+        self.assertEqual(machine.memory[a - 1], 10)
+
+        for i in range(10):
+            self.assertEqual(machine.memory[a + i], i)
+
+    def test_mergeSort(self):
+
+        machine = IRMachine1()
+
+        instructions, labels, inv_lbl, func_help = parse(tokenize(sp.samp22))
+        machine.run(instructions, labels, inv_lbl, func_help)
+
+        arr = machine.memory[0]
+
+        # machine.print_memory(0, 120)
+
+        self.assertEqual(machine.memory[arr - 1], 100)
+
+
+        for i in range(0, 99):
+            self.assertTrue(machine.memory[arr + i] <= machine.memory[arr + i + 1],
+                'Mem loc: {}, seed: {}'.format(arr + i, machine.seed))
+
+        self.assertEqual(machine.sp, -1)
+
 
 if __name__ == '__main__':
     unittest.main()

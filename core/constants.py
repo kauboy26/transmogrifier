@@ -10,6 +10,7 @@ STACK_TOP = 8
 MEM_LOC = 9
 
 ADDRESS = 10
+ARR_TYPE = 11
 
 AND = 'and'
 OR = 'or'
@@ -38,7 +39,7 @@ DOUBLE_EQ = '=='
 
 MEM = 'mem'
 ADDRESS_OF = 'addrOf'
-BLOCK = 'block'
+ARRAY = 'array'
 DEF = 'def'
 DEF2 = 'define'
 DECLARE = 'declare'
@@ -57,7 +58,7 @@ POP = '__pop__'
 PUSH = '__push__'
 HALT = '__halt__'
 SETUP_FUNC = '__setup_func__'
-DESTROY_VARS = '__destroy_vars__'
+CLEAN_MAIN = '__clean_main__'
 JROUTINE = '__jump_to_routine___'
 R_TOCALLER = '__return_to_caller__'
 FETCH_RV = '__fetch_return_value__'
@@ -67,6 +68,8 @@ BRANCH = '__branch__'
 SETUP_MAIN = '__setup_main__'
 MEM_ASSIGN = '__mem_assign__'
 MAIN_FUNC = '__main_func__'
+ARR_ASSIGN = '__array_assign__'
+MEM_ARR_ASSIGN = '__mem_array_assign__'
 
 HIGHEST_PRECEDENCE = 500
 LOWEST_PRECEDENCE = 0
