@@ -267,6 +267,7 @@ def fibo(n):
     l = mem(n + 100);
 
     if n > 1:
+        a = 10;
         return fibo(n - 1) + fibo(n - 2);
     end
 
@@ -496,6 +497,23 @@ def increment(a):
 end
 '''
 
+
+samp19 = '''
+declare h(a, b);
+
+main:
+    a = 1;
+    b = 2;
+end
+
+def h(a, b):
+    if a > b:
+        c = 1;
+    end
+
+    c = 2;
+end
+'''
 
 samps = [   samp1, samp2, samp3, samp4, samp5, samp6,\
             samp7, samp8, samp9, samp10, samp11, samp12,\

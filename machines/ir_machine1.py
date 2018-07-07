@@ -46,7 +46,6 @@ PRINT = 'print'
 INJECT = 'inject'
 
 # These are different, since they instruct the (IR) machine what to do.
-CREATE = '__create__'
 POP = '__pop__'
 PUSH = '__push__'
 HALT = '__halt__'
@@ -60,6 +59,7 @@ COND_BRANCH = '__cond_branch__'
 BRANCH = '__branch__'
 SETUP_MAIN = '__setup_main__'
 MEM_ASSIGN = '__mem_assign__'
+MAIN_FUNC = '__main_func__'
 
 class IRMachine1():
     def __init__(self):
@@ -72,14 +72,14 @@ class IRMachine1():
         self.pc = 0
         self.link = randint(0, 1000) # The link register
         self.cc = randint(-999, 1000)
+
+        self.func_help = None
         print('Finished creating IR.')
 
     def perform_operation(self, operands, operation, labels, inv_labels):
         
         if operation == SETUP_MAIN:
             self.setup_main()
-        elif operation == CREATE:
-            self.create_var(operands)
         elif operation == POP:
             self.pop()
         elif operation == PUSH:
@@ -162,13 +162,14 @@ class IRMachine1():
             self.pc += 1
 
 
-    def run(self, instructions, labels, inv_labels):
+    def run(self, instructions, labels, inv_labels, func_help):
         """
         Runs a set of instructions given labels and inv_labels. The
         instructions, labels and inv_labels are assumed to be valid, and the
         IRMachine performs no checks.
         """
         print('Running...')
+        self.func_help = func_help
         self.pc = 0
 
         num_executed = 0
@@ -209,35 +210,10 @@ class IRMachine1():
         self.sp = -1
         self.stack_frame = [{}]
 
-        self.pc += 1
-
-    def create_var(self, operands):
-        """
-        The CREATE instruction has two meanings, as described in notes. These
-        meanings will change as the IRMachine evolves, and starts storing
-        variables on the stack.
-        1) a = $
-            Mark the top-most position of the stack as belonging to the variable
-            "a".
-        2) a = <const or other var>
-            Claim space on the stack first and then put the constant or variable
-            within there.
-        In both cases, the location of the variable will be recorded within
-        self.stack_frame
-        """
-
-        t1, op1 = operands[0]
-        t0, var = operands[1]
-
-        if t1 == NUMBER:
+        for var in self.func_help[MAIN_FUNC]:
+            # Really, this will be implemented with a self.sp += num_vars
             self.sp += 1
-            self.memory[self.sp] = op1
-        elif t1 == ID:
-            self.sp += 1
-            self.memory[self.sp] = self.memory[self.fp + self.stack_frame[-1][op1]]
-
-        # Store the location of the newly created variable.
-        self.stack_frame[-1][var] = self.sp - self.fp
+            self.stack_frame[-1][var] = self.sp        
 
         self.pc += 1
 
@@ -373,6 +349,8 @@ class IRMachine1():
         Creates and adds params to stack_frame.
         """
 
+        func_name, params = operands
+
         # make room for RV, RA and old FP
         self.sp += 3
 
@@ -385,10 +363,15 @@ class IRMachine1():
 
         # Create and add params to stack_frame
         new_frame = {}
-        num_params = len(operands)
+        num_params = len(params)
 
-        for i, param in enumerate(operands):
+        for i, param in enumerate(params):
             new_frame[param] = - 4 - i
+
+        # Make room for local variables
+        self.sp += len(self.func_help[func_name])
+        for i, var in enumerate(self.func_help[func_name]):
+            new_frame[var] = i
 
         self.stack_frame.append(new_frame)
 

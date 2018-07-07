@@ -29,7 +29,7 @@ now being enforced.
 When processing "if" statement bodies, variables may be created for that block, and may be destroyed later as we leave that block. In order to keep track of which variables were created and need to be destroyed in a certain block, the vars_this_block stack will be used. As each "end" is encountered, variables that were last created will be destroyed.  
 The curr_scope_type is to keep track of the innermost scope we're in (are we in "if", "while", "def", "main", etc?). This is used to resolve what the keyword "end" needs to do, since its meaning changes depending on the scope type. For example, an "end" encountered when the scope type is an "if" statement means we need to delete some variables, but an "end" encountered when the scope type is "def" means we need to generate code to clean-up the stack and return to the caller.
 
-## Note 5
+## Note 5 -- OUTDATED
 The meaning of CREATE:  
 CREATE, to the IRMachine, means if the second operand is not the stack top ($): claim space for the new variable, and set the value to whavever it should be. If the second oeprand is the top of the stack: claim space (by eating up the top of the stack) and mark this assign this space to the new variable.  
 Also EQUAL will EAT THINGS from the stack!

@@ -58,7 +58,6 @@ PRINT = 'print'
 INJECT = 'inject'
 
 # These are different, since they instruct the (IR) machine what to do.
-CREATE = '__create__'
 POP = '__pop__'
 PUSH = '__push__'
 HALT = '__halt__'
@@ -72,6 +71,7 @@ COND_BRANCH = '__cond_branch__'
 BRANCH = '__branch__'
 SETUP_MAIN = '__setup_main__'
 MEM_ASSIGN = '__mem_assign__'
+MAIN_FUNC = '__main_func__'
 
 HIGHEST_PRECEDENCE = 500
 LOWEST_PRECEDENCE = 0
@@ -112,6 +112,12 @@ def parse(token_list=[]):
 
     functions = {}
     defined_funcs = {}
+
+    # this is used to figure out how much stack space to allocate
+    # initially (counts num vars created).
+    func_help = {}
+    vars_of_func = {}
+    curr_func = None
 
     # See note 4
     variables = {}
@@ -162,6 +168,11 @@ def parse(token_list=[]):
                 vars_this_block.append([])
                 curr_scope_type.append(MAIN)
 
+
+                curr_func = MAIN_FUNC
+                func_help[curr_func] = []
+                vars_of_func = {}
+
                 ir_form.append((None, SETUP_MAIN))
             elif value == DECLARE:
                 # Process the entire declare here.
@@ -171,13 +182,16 @@ def parse(token_list=[]):
                 precedence[func_name] = 200
                 args_needed[func_name] = args_count
                 effect_of[func_name] = 1 - args_count
+
+                func_help[func_name] = []
+
             elif value == DEF or value == DEF2:
                 check(not proc_func, 'Functions cannot be declared within functions.', line_number)
                 proc_func = True
                 func_name, param_list, i, line_number\
                     = process_define(token_list, i, functions, defined_funcs,
                         line_number)
-                ir_form.append((param_list, SETUP_FUNC))
+                ir_form.append(((func_name, param_list), SETUP_FUNC))
 
                 labels[func_name] = len(ir_form) - 1
                 ln_to_label[len(ir_form) - 1] = func_name
@@ -185,6 +199,9 @@ def parse(token_list=[]):
 
                 vars_this_block.append(param_list[:])
                 curr_scope_type.append(DEF)
+
+                curr_func = func_name
+                vars_of_func = {}
 
                 for param in param_list:
                     variables[param] = 0
@@ -221,9 +238,6 @@ def parse(token_list=[]):
                 vars_to_remove = vars_this_block.pop()
                 remove_variables(vars_to_remove, variables)
 
-                if vars_to_remove:
-                    ir_form.append((vars_to_remove, DESTROY_VARS))
-
                 vars_this_block.append([])
                 i = i + 1
 
@@ -259,9 +273,6 @@ def parse(token_list=[]):
                 vars_to_remove = vars_this_block.pop()
                 remove_variables(vars_to_remove, variables)
 
-                if vars_to_remove:
-                    ir_form.append((vars_to_remove, DESTROY_VARS))
-
                 vars_this_block.append([])
 
                 i = i + 1
@@ -286,31 +297,28 @@ def parse(token_list=[]):
                 scope_type = curr_scope_type.pop()
 
                 vars_to_remove = vars_this_block.pop()
-                # ir_form.append((vars_to_remove, DESTROY_VARS))
                 remove_variables(vars_to_remove, variables)
 
                 if scope_type == MAIN:
+
                     if vars_to_remove:
-                        ir_form.append((vars_to_remove, DESTROY_VARS))
+                        ir_form.append((func_help[MAIN_FUNC], DESTROY_VARS))
                         
                     ir_form.append((None, HALT))
                     proc_func = False
+                    curr_func = None
                 elif scope_type == DEF:
                     ir_form.append((None, R_TOCALLER))
                     proc_func = False
+                    curr_func = None
                 elif scope_type == IF:
                     lbl, end_lbl = cond_lbls.pop()
 
-                    if vars_to_remove:
-                        ir_form.append((vars_to_remove, DESTROY_VARS))
                     labels[lbl] = len(ir_form)
                     ln_to_label[len(ir_form)] = lbl
 
                 elif scope_type == ELIF:
                     lbl, end_lbl = cond_lbls.pop()
-
-                    if vars_to_remove:
-                        ir_form.append((vars_to_remove, DESTROY_VARS))
 
                     labels[lbl] = len(ir_form) # Note 8
                     labels[end_lbl] = len(ir_form)
@@ -318,17 +326,11 @@ def parse(token_list=[]):
                 elif scope_type == ELSE:
                     lbl, end_lbl = cond_lbls.pop()
 
-                    if vars_to_remove:
-                        ir_form.append((vars_to_remove, DESTROY_VARS))
-
                     labels[end_lbl] = len(ir_form)
                     ln_to_label[len(ir_form)] = end_lbl # TODO POSSIBLE BUG FROM LABEL CLASH (empty else)?
                 elif scope_type == WHILE:
 
                     end_lbl, head_lbl = cond_lbls.pop()
-
-                    if vars_to_remove:
-                        ir_form.append((vars_to_remove, DESTROY_VARS))
 
                     ir_form.append((head_lbl, BRANCH))
 
@@ -393,10 +395,13 @@ def parse(token_list=[]):
                     check(c == ID or c == MEM_LOC, 'Cannot assign value to a literal.', line_number)
                     if c == ID and v not in variables:
                         # Create the variable
-                        ir_form.append((operands, CREATE))
+                        ir_form.append((operands, EQUAL))
                         vars_this_block[-1].append(v)
                         created_vars = created_vars + 1
                         variables[v] = 0
+                        if v not in vars_of_func:
+                            func_help[curr_func].append(v)
+                            vars_of_func[v] = 0
                     elif c == MEM_LOC:
                         ir_form.append(([operands[0], v], MEM_ASSIGN))
                     else:
@@ -515,7 +520,7 @@ def parse(token_list=[]):
     # to be broadcast elsewhere.
     check(not op_stack and not num_stack, 'Missing semicolon?', line_number)
 
-    return ir_form, labels, ln_to_label
+    return ir_form, labels, ln_to_label, func_help
 
 
 def check_operands_exist(operands, variables, line_number):
