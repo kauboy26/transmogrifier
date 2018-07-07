@@ -1,70 +1,12 @@
-from random import randint
-
-NUMBER = 0
-KEYWORD = 1
-OPERATOR = 2
-ID = 3
-STRING = 4
-NEWLINE = 5
-COMMENT = 6
-
-STACK_TOP = 8
-MEM_LOC = 9
-ADDRESS = 10
-
-AND = 'and'
-OR = 'or'
-NOT = 'not'
-B_AND = '&' # bitwise and, or and not
-B_OR = '|'
-B_NOT = '~'
-MULTI = '*'
-DIVIS = '/'
-MODULO = '%'
-PLUS = '+'
-MINUS = '-'
-EQUAL = '='
-COMMA = ','
-SEMICOLON = ';'
-COLON = ':'
-LPAREN = '('
-RPAREN = ')'
-LBRACKET = '['
-RBRACKET = ']'
-LTHAN = '<'
-GTHAN = '>'
-LTHANEQ = '<='
-GTHANEQ = '>='
-DOUBLE_EQ = '=='
-
-MEM = 'mem'
-ADDRESS_OF = 'address_of'
-BLOCK = 'block'
-
-RETURN = 'return'
-PRINT = 'print'
-INJECT = 'inject'
-
-# These are different, since they instruct the (IR) machine what to do.
-POP = '__pop__'
-PUSH = '__push__'
-HALT = '__halt__'
-SETUP_FUNC = '__setup_func__'
-DESTROY_VARS = '__destroy_vars__'
-JROUTINE = '__jump_to_routine___'
-R_TOCALLER = '__return_to_caller__'
-FETCH_RV = '__fetch_return_value__'
-LOAD_CC = '__load_cc__'
-COND_BRANCH = '__cond_branch__'
-BRANCH = '__branch__'
-SETUP_MAIN = '__setup_main__'
-MEM_ASSIGN = '__mem_assign__'
-MAIN_FUNC = '__main_func__'
+from random import randint, seed
+from core.constants import *
 
 class IRMachine1():
     def __init__(self):
         print('Creating IR....')
-        self.memory = [randint(0, 2 ** 16) for i in range(10000)]
+        self.seed = 23232
+        seed(self.seed)
+        self.memory = [randint(-500, 2 ** 16) for i in range(10000)]
         self.sp = randint(-1000, 1000)
         self.fp = randint(-1000, 1000)
         self.stack_frame = [{} for i in range(randint(0, 10))]
@@ -381,16 +323,14 @@ class IRMachine1():
 
     def destroy_vars(self, operands):
         """
-        Destroys all the variables created within some scope:
-        - Removes them from the stack frame
-        - Reclaims the area occupied by them on the stack.
+        Cleans up the main method, by reclaiming stack space.
         """
 
         print('Deleting variables:')
 
         num_to_del = len(operands)
 
-        # REmove from stack frame
+        # Remove from stack frame
         curr_frame = self.stack_frame[-1]
         for var in operands:
             print('{} : {}'.format(var, self.memory[self.fp + curr_frame[var]]))

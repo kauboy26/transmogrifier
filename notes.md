@@ -56,6 +56,9 @@ The MEM instruction, though it looks like a function if you look at the syntax, 
 ## Note 11
 Depending on whether the value to be assigned to is of type STACK TOP, the location to be looked at will change. If we are trying to accomplish something like ```mem(1 + 1) = 1 + 1;```, in the end we are trying to do ```mem($1) = $2;```. Here, $1 will be found below $2 on the stack.
 
+## Note 12
+The purpose of adding variables to the dictionary and so on is just a syntax check. It DOES NOT affect the way the IRMachine executes.
+
 # Other issues
 
 * Tried to execute "a = (1 +;", instead of getting "not enough operands" or "missing paren" message, got the variable "a" is not defined. This is because the stack does not care about the actual positions of operands, and so in the popping process the "a" and "1" are popped to be added, but "a" obviously hasn't been defined yet.

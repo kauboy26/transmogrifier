@@ -1,80 +1,10 @@
 from random import randint
 from core.miscell import check
+from core.constants import *
 
 # I will use these constants to save myself some trouble in
 # typing. Sublime's autocompletion feature my friend.
-NUMBER = 0
-KEYWORD = 1
-OPERATOR = 2
-ID = 3
-STRING = 4
-NEWLINE = 5
-COMMENT = 6
 
-STACK_TOP = 8
-MEM_LOC = 9
-
-ADDRESS = 10
-
-AND = 'and'
-OR = 'or'
-NOT = 'not'
-B_AND = '&' # bitwise and, or and not
-B_OR = '|'
-B_NOT = '~'
-MULTI = '*'
-DIVIS = '/'
-MODULO = '%'
-PLUS = '+'
-MINUS = '-'
-EQUAL = '='
-COMMA = ','
-SEMICOLON = ';'
-COLON = ':'
-LPAREN = '('
-RPAREN = ')'
-LBRACKET = '['
-RBRACKET = ']'
-LTHAN = '<'
-GTHAN = '>'
-LTHANEQ = '<='
-GTHANEQ = '>='
-DOUBLE_EQ = '=='
-
-MEM = 'mem'
-ADDRESS_OF = 'addrOf'
-BLOCK = 'block'
-DEF = 'def'
-DEF2 = 'define'
-DECLARE = 'declare'
-IF = 'if'
-ELIF = 'elif'
-ELSE = 'else'
-WHILE = 'while'
-END = 'end'
-MAIN = 'main'
-RETURN = 'return'
-PRINT = 'print'
-INJECT = 'inject'
-
-# These are different, since they instruct the (IR) machine what to do.
-POP = '__pop__'
-PUSH = '__push__'
-HALT = '__halt__'
-SETUP_FUNC = '__setup_func__'
-DESTROY_VARS = '__destroy_vars__'
-JROUTINE = '__jump_to_routine___'
-R_TOCALLER = '__return_to_caller__'
-FETCH_RV = '__fetch_return_value__'
-LOAD_CC = '__load_cc__'
-COND_BRANCH = '__cond_branch__'
-BRANCH = '__branch__'
-SETUP_MAIN = '__setup_main__'
-MEM_ASSIGN = '__mem_assign__'
-MAIN_FUNC = '__main_func__'
-
-HIGHEST_PRECEDENCE = 500
-LOWEST_PRECEDENCE = 0
 
 def parse(token_list=[]):
     check(token_list, 'The compiler that one not working guru.', -1)
@@ -235,8 +165,7 @@ def parse(token_list=[]):
                 n_lbl += 1
                 cond_lbls.append((generate_label(n_lbl, line_number), end_lbl))
 
-                vars_to_remove = vars_this_block.pop()
-                remove_variables(vars_to_remove, variables)
+                remove_variables(vars_this_block.pop(), variables)
 
                 vars_this_block.append([])
                 i = i + 1
@@ -270,8 +199,7 @@ def parse(token_list=[]):
                 
                 cond_lbls.append((lbl, end_lbl))
 
-                vars_to_remove = vars_this_block.pop()
-                remove_variables(vars_to_remove, variables)
+                remove_variables(vars_this_block.pop(), variables)
 
                 vars_this_block.append([])
 
@@ -296,13 +224,13 @@ def parse(token_list=[]):
                 check(curr_scope_type, 'Mismatched "end" (extra?).', line_number)
                 scope_type = curr_scope_type.pop()
 
-                vars_to_remove = vars_this_block.pop()
-                remove_variables(vars_to_remove, variables)
+                remove_variables(vars_this_block.pop(), variables)
 
                 if scope_type == MAIN:
 
-                    if vars_to_remove:
-                        ir_form.append((func_help[MAIN_FUNC], DESTROY_VARS))
+                    vars_to_clean = func_help[MAIN_FUNC]
+                    if vars_to_clean:
+                        ir_form.append((vars_to_clean, DESTROY_VARS))
                         
                     ir_form.append((None, HALT))
                     proc_func = False
@@ -386,26 +314,25 @@ def parse(token_list=[]):
 
 
                 operands = [num_stack.pop() for i in range(args_needed[operation])]
-                # Ensure the required variables exist, or create variables in
-                # the case of an assignment statement.
+
                 if operation == EQUAL:
                     check_operands_exist(operands[:-1], variables, line_number)
                     check(not op_stack, 'Illegal statement.', line_number) # See note 3
                     c, v = operands[-1]
                     check(c == ID or c == MEM_LOC, 'Cannot assign value to a literal.', line_number)
-                    if c == ID and v not in variables:
-                        # Create the variable
-                        ir_form.append((operands, EQUAL))
-                        vars_this_block[-1].append(v)
-                        created_vars = created_vars + 1
-                        variables[v] = 0
-                        if v not in vars_of_func:
-                            func_help[curr_func].append(v)
-                            vars_of_func[v] = 0
-                    elif c == MEM_LOC:
+                    if c == MEM_LOC:
                         ir_form.append(([operands[0], v], MEM_ASSIGN))
                     else:
+                        if v not in variables:
+                            # note 12
+                            vars_this_block[-1].append(v)
+                            created_vars = created_vars + 1
+                            variables[v] = 0
+                            if v not in vars_of_func:
+                                func_help[curr_func].append(v)
+                                vars_of_func[v] = 0
                         ir_form.append((operands, operation))
+
                     continue
                 else:
                     check_operands_exist(operands, variables, line_number)
