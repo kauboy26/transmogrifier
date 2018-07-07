@@ -50,6 +50,8 @@ WHILE = 'while'
 END = 'end'
 MAIN = 'main'
 RETURN = 'return'
+GETC = 'getc'
+OUTC = 'outc'
 PRINT = 'print'
 INJECT = 'inject'
 

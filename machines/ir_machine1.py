@@ -156,6 +156,7 @@ class IRMachine1():
         Print the "registers"
         """
         print('***************************\nPrinting regs:')
+        print('CC:', self.cc)
         print('SP:', self.sp)
         print('FP:', self.fp)
         print('LINK:', self.link)

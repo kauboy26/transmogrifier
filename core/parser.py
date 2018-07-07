@@ -18,22 +18,23 @@ def parse(token_list=[]):
                     COLON: 70,
                     LPAREN: 0, RPAREN: 1,
                     # functions:
-                    MEM: 200, ADDRESS_OF: 200, ARRAY: 200, PRINT: 200, INJECT: 200}
+                    MEM: 200, ADDRESS_OF: 200, ARRAY: 200, GETC: 200, PRINT: 200,
+                    OUTC: 200, INJECT: 200}
 
 
     args_needed = {MULTI: 2, DIVIS: 2, MODULO: 2, PLUS: 2, MINUS: 2, NOT: 1,
                     AND: 2, OR: 2, LTHAN: 2, GTHAN: 2, GTHANEQ: 2, LTHANEQ: 2,
                     DOUBLE_EQ: 2, EQUAL: 2,
                     MEM: 1, ADDRESS_OF: 1,
-                    ARRAY: 1, PRINT: 1, INJECT: 1}
+                    ARRAY: 1, GETC: 0, PRINT: 1, OUTC: 1, INJECT: 1}
 
-    primitive_functions = {MEM: 0, ADDRESS_OF: 0, ARRAY: 0, PRINT: 0,
-                            INJECT: 0}
+    primitive_functions = {MEM: 0, ADDRESS_OF: 0, ARRAY: 0, GETC: 0,
+                            INJECT: 0, PRINT: 0, OUTC: 0}
 
     effect_of = {MULTI: -1, DIVIS: -1, MODULO: -1, PLUS: -1, MINUS: -1, NOT: 0,
                     AND: -1, OR: -1, LTHAN: -1, GTHAN: -1, GTHANEQ: -1, LTHANEQ: -1,
                     DOUBLE_EQ: -1, EQUAL: -1, MEM: 0, ADDRESS_OF: 0,
-                    ARRAY: 0, PRINT: 0, INJECT: 0}
+                    ARRAY: 0, GETC: 1, INJECT: 0, PRINT: 0, OUTC: 0}
 
     line_number = 1
     labels = {}

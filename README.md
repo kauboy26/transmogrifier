@@ -8,6 +8,7 @@ Transmogrifier is a compiler targeting the LC3 ISA. The project is still much un
 * An "address of" operator to find the address of some variable
 * Variable length arrays that can be created on the stack
 * Strings (on the stack)
+* Console input / output
 
 If possible, I will do these too:  
 * Short circuit logical evaluation
