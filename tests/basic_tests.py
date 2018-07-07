@@ -256,6 +256,18 @@ class ArraySimpleTests(unittest.TestCase):
 
         self.assertEqual(machine.sp, -1)
 
+    def test_palinString(self):
+
+        machine = IRMachine1()
+
+        instructions, labels, inv_lbl, func_help = parse(tokenize(sp.samp23))
+        machine.run(instructions, labels, inv_lbl, func_help)
+
+        self.assertTrue(machine.memory[20] == 0)
+        self.assertTrue(machine.memory[21] == 1)
+
+        print('hello world.')
+
 
 if __name__ == '__main__':
     unittest.main()

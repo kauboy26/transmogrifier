@@ -6,7 +6,7 @@ class IRMachine1():
         print('Creating IR....')
         self.seed = randint(-1000, 1000)
         seed(self.seed)
-        self.memory = [randint(-2 ** 16, 2 ** 16) for i in range(10000)]
+        self.memory = [1 for i in range(10000)]
         self.sp = randint(-1000, 1000)
         self.fp = randint(-1000, 1000)
         self.stack_frame = [{} for i in range(randint(0, 10))]
@@ -297,6 +297,8 @@ class IRMachine1():
             length = self.memory[self.fp + self.stack_frame[-1][op1]]
         elif t1 == NUMBER:
             length = op1
+        elif t1 == STRING:
+            length = len(op1) + 1
 
         # print('Write location:', location, ', value:', self.memory[location])
 
@@ -313,6 +315,12 @@ class IRMachine1():
         self.sp += length
 
         self.memory[location] = pointer
+
+        # If it's a string, initialize that memory
+        if t1 == STRING:
+            for i, c in enumerate(op1):
+                self.memory[pointer + i] = ord(c)
+            self.memory[pointer + length - 1] = 0 # Null terminated
 
         self.pc += 1
 
@@ -334,11 +342,18 @@ class IRMachine1():
                 length = self.memory[self.fp + self.stack_frame[-1][op1]]
             elif t1 == NUMBER:
                 length = op1
+            elif t1 == STRING:
+                length = len(op1) + 1
             self.sp += 1
             self.memory[self.sp] = length
 
         pointer = self.sp + 1
         self.sp += length
+
+        if t1 == STRING:
+            for i, c in enumerate(op1):
+                self.memory[pointer + i] = ord(c)
+            self.memory[pointer + length - 1] = 0
 
         self.memory[self.fp + self.stack_frame[-1][var]] = pointer
 

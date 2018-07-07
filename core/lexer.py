@@ -99,17 +99,15 @@ def tokenize(in_str):
                 while i < length and in_str[i] != '"' and in_str[i] != '\n':
                     # Screw escape characters
                     i = i + 1
-                check(i < length and in_str != '\n', 'Incomplete string: {}" on line {}'
-                    .format(in_str[start_index:i], line_number))
+                check(i < length and in_str != '\n', 'Incomplete string: "{}"'
+                    .format(in_str[start_index:i]), line_number)
                 token_list.append((STRING, in_str[start_index + 1:i]))
                 i = i + 1
             elif in_str[i] == '\'':
                 i = i + 1
-                check(i < length and in_str[i] != '\n', 'Bad character formatting on line {}'
-                    .format(line_number))
+                check(i < length and in_str[i] != '\n', 'Bad character formatting', line_number)
                 i = i + 1
-                check(i < length and in_str[i] == '\'', 'Lone " \' " found on line {}'.
-                    format(line_number))
+                check(i < length and in_str[i] == '\'', 'Lone " \' "', line_number)
                 token_list.append((NUMBER, ord(in_str[i - 1])))
                 i = i + 1  
             elif in_str[i] == '#':

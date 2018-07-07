@@ -650,6 +650,43 @@ end
 
 '''
 
+samp23 = '''
+
+declare is_palin(a);
+
+
+main:
+    a = "abcdefghijklmnop";
+    mal = "malayalam";
+    b = is_palin(a);
+    c = is_palin(mal);
+
+    # assert
+    mem(20) = b; # 0
+    mem(21) = c; # 1
+end
+
+def is_palin(a):
+
+    length = mem(a - 1) - 1;
+    i = 0;
+    j = length - 1;
+
+    while i < j and mem(a + i) == mem(a + j):
+        i = i + 1;
+        j = j - 1;
+    end
+
+    if i < j:
+        return 0;
+    end
+
+    return 1;
+
+end
+
+'''
+
 samps = [   samp1, samp2, samp3, samp4, samp5, samp6,\
             samp7, samp8, samp9, samp10, samp11, samp12,\
             samp13, samp14, samp15]
