@@ -400,12 +400,12 @@ samp15 = '''
 declare bsort(start, length);
 
 main:
-    start = 10;
-    length = 50;
+    start = 20;
+    length = 80;
 
     bsort(start, length);
 
-    # Assert mem[10:60] is sorted
+    # Assert mem[20:100] is sorted
 end
 
 def bsort(start, length):

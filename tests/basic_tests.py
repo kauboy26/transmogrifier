@@ -181,14 +181,11 @@ class MassMemoryOpsUnittests(unittest.TestCase):
     def tests_memorySorted(self):
         machine = IRMachine1()
 
-        machine.print_memory(9, 65)
-
         instructions, labels, inv_lbl, func_help = parse(tokenize(sp.samp15))
         machine.run(instructions, labels, inv_lbl, func_help)
-        machine.print_memory(9, 65)
 
-        # for i in range(10, 59):
-        #     self.assertTrue(machine.memory[i] < machine.memory[i + 1], i)
+        for i in range(20, 99):
+            self.assertTrue(machine.memory[i] < machine.memory[i + 1], 'Mem loc: {}'.format(i))
 
         self.assertEqual(machine.sp, -1)
 
