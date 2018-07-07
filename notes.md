@@ -57,7 +57,13 @@ The MEM instruction, though it looks like a function if you look at the syntax, 
 Depending on whether the value to be assigned to is of type STACK TOP, the location to be looked at will change. If we are trying to accomplish something like ```mem(1 + 1) = 1 + 1;```, in the end we are trying to do ```mem($1) = $2;```. Here, $1 will be found below $2 on the stack.
 
 ## Note 12
-The purpose of adding variables to the dictionary and so on is just a syntax check. It DOES NOT affect the way the IRMachine executes.
+The purpose of adding variables to the dictionary (in the parser) and so on is just a syntax check. It DOES NOT affect the way the IRMachine executes.
+
+## Note 13
+The number of variables to be created for a method is known at compilation. Therefore, on method set up, all the variables can be created (i.e. space for them can be allocated on the stack). This helps with variable-sized arrays because now the size of an array does not affect the location of a variable that is created (initialized) later, since all variables are created in the very beginning.
+
+## Note 14
+The length of an array is stored in the memory location right before the first element. See the "len" method that has been written in a couple of the test cases.
 
 # Other issues
 
