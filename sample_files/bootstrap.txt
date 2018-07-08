@@ -1,0 +1,110 @@
+# Bootstrapping my friend
+
+declare eval(str);
+
+main:
+    # The string to evaluate
+    str = "12 + 8* 3 +4;";
+
+    a = eval(str);
+end
+
+
+def eval(str):
+    # Create two stacks, one for operands and one for operation
+    num_stack = array(10);
+    op_stack = array(10);
+
+    # pointers to the top of the stack
+    ntop = -1;
+    otop = -1;
+
+    # to store all the parsed elements
+    sl = -1;
+    tokens = array(15);
+
+    i = 0;
+
+    c = mem(str + i);
+
+    while c:
+        if c >= '0' and c <= '9':
+            # found a number, capture the whole thing.
+            num = c - '0';
+
+            i = i + 1;
+            c = mem(str + i);
+            while c >= '0' and c <= '9':
+                num = num * 10 + (c - '0');
+                i = i + 1;
+                c = mem(str + i);
+            end
+
+            # "i" should now be pointing to a non-numeric character
+            # the number is loaded into "num"
+
+            sl = sl + 1;
+            mem(tokens + sl) = num;
+        elif c == '+':
+            sl = sl + 1;
+            mem(tokens + sl) = -2;
+            i = i + 1;
+        elif c == '*':
+            sl = sl + 1;
+            mem(tokens + sl) = -1;
+            i = i + 1;
+        elif c == ';':
+            sl = sl + 1;
+            mem(tokens + sl) = -3;
+            i = i + 1;
+        else:
+            # eat up other characters
+            i = i + 1;
+        end
+
+        c = mem(str + i);
+    end
+
+
+    # at this point, all tokens loaded
+
+    i = 0;
+    res = 0;
+
+    while i <= sl:
+        curr = mem(tokens + i);
+
+        if curr >= 0:
+            # it's a number
+            ntop = ntop + 1;
+            mem(num_stack + ntop) = curr;
+        else:
+
+            while otop >= 0 and curr <= mem(op_stack + otop):
+
+                operation = mem(op_stack + otop);
+                otop = otop - 1;
+
+                num1 = mem(num_stack + ntop);
+                num2 = mem(num_stack + ntop - 1);
+
+                ntop = ntop - 1;
+
+                if operation == -1:
+                    mem(num_stack + ntop) = num1 * num2;
+                else:
+                    mem(num_stack + ntop) = num1 + num2;
+                end
+            end
+
+            otop = otop + 1;
+            mem(op_stack + otop) = curr;
+        end
+
+        i = i + 1;
+    end
+
+
+    return mem(num_stack + ntop);
+
+end

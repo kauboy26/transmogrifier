@@ -6,7 +6,7 @@ class IRMachine1():
         print('Creating IR....')
         self.seed = randint(-1000, 1000)
         seed(self.seed)
-        self.memory = [1 for i in range(10000)]
+        self.memory = [0 for i in range(10000)]
         self.sp = randint(-1000, 1000)
         self.fp = randint(-1000, 1000)
         self.stack_frame = [{} for i in range(randint(0, 10))]
@@ -59,7 +59,11 @@ class IRMachine1():
 
         else:
 
+            # print('doig op"{}"'.format(operation))
+
             vals = self._get_operand_values(operands)
+
+            # print('operands', operands)
 
             op0 = vals[0] # These are in the wrong order
 
@@ -94,11 +98,11 @@ class IRMachine1():
                     val = int(op0 == op1)
                 elif operation == LTHANEQ:
                     val = int(op0 <= op1)
-                elif operands == GTHANEQ:
+                elif operation == GTHANEQ:
                     val = int(op0 >= op1)
-                elif operands == B_AND:
+                elif operation == B_AND:
                     val = int(op0 & op1)
-                elif operands == B_OR:
+                elif operation == B_OR:
                     val = int(op0 | op1)
 
             self.sp += 1
