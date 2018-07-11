@@ -88,7 +88,6 @@ def parse(token_list=[]):
             effect[-1] += 1
             i = i + 1
         elif tk_type == STRING:
-            print('String ', value)
             num_stack.append((ARR_TYPE, token_list[i]))
             effect[-1] += 1
             i = i + 1

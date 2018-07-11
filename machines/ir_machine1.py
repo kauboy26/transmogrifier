@@ -146,8 +146,8 @@ class IRMachine1():
         IRMachine performs no checks.
         """
         print('Running...\n')
-        print('Console:\n')
-        print('___________________________________________________\n')
+        print('Console:')
+        print('_________________________________________________________________\n')
         self.func_help = func_help
         self.pc = 0
 
@@ -159,7 +159,7 @@ class IRMachine1():
             self.perform_operation(operands, instruction, labels, inv_labels)
             # self.print_regs()
         
-        print('\n__________________________________________________')
+        print('\n________________________________________________________________')
 
         print('\n\nFinished running. Executed {} instructions.'.format(num_executed))
 
@@ -533,7 +533,7 @@ class IRMachine1():
         there is a buffer.
         """
         while self.buf_ptr >= len(self.buffer):
-            self.buffer = input('>>  ')
+            self.buffer = input()
             self.buf_ptr = 0
 
         c = self.buffer[self.buf_ptr]

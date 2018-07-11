@@ -704,10 +704,7 @@ main:
     print(a);
     print(b);
 end
-
-
 '''
-
 
 
 tooheavy = '''
@@ -720,7 +717,7 @@ main:
     # Make sure it is valid, has only '+' and '*',
     # and it ends with a semicolon.
 
-    msg = "Type in an expression with only '+' and '*'. Make sure it is valid, and ends with a semicolon.";
+    msg = "Type in an expression with only '+' and '*'.\\nMake sure it is valid, and ends with a semicolon.\\n>>\\t";
     
     print(msg);
 
@@ -740,7 +737,7 @@ main:
     a = eval(str);
 
     # Now to display that.
-    output = "   The result is: ";
+    output = "\\nThe result is: ";;
     print(output);
 
     i = 10000;

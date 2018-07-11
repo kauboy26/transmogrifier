@@ -52,6 +52,28 @@ def is_special(c):
         c == '"' or c == '\'' or\
         c == '#'
 
+def convert_escape(c, line_number):
+    """
+    Returns the escape character.
+    """
+    if c == 'n':
+        return '\n'
+    elif c == '0':
+        return '\0'
+    elif c == 't':
+        return '\t'
+    elif c == '"':
+        return '"'
+    elif c == '\'':
+        return '\''
+    elif c == '\\':
+        return '\\'
+    elif c == 'v':
+        return '\v'
+    
+    check(False, 'Invalid escape character.', line_number)
+
+
 def tokenize(in_str):
     """
     Tokenize the given string, with some checks. The returned token list will be of
@@ -96,20 +118,36 @@ def tokenize(in_str):
             start_index = i
             if in_str[i] == '"':
                 # Capture the entire string
+
+                str_lit = []
+
                 i = i + 1
                 while i < length and in_str[i] != '"' and in_str[i] != '\n':
-                    # Screw escape characters
+                    c = in_str[i]
+                    if c == '\\':
+                        i = i + 1
+                        check(i < length, 'Bad escape.', line_number)
+                        c = convert_escape(in_str[i], line_number)
+
+                    str_lit.append(c)
                     i = i + 1
-                check(i < length and in_str != '\n', 'Incomplete string: "{}"'
+
+                check(i < length and in_str != '\n', 'Incomplete string: "{}".'
                     .format(in_str[start_index:i]), line_number)
-                token_list.append((STRING, in_str[start_index + 1:i]))
+
+                token_list.append((STRING, ''.join(str_lit)))
                 i = i + 1
             elif in_str[i] == '\'':
                 i = i + 1
-                check(i < length and in_str[i] != '\n', 'Bad character formatting', line_number)
+                check(i < length and in_str[i] != '\n', 'Bad character formatting.', line_number)
+                c = in_str[i]
+                if in_str[i] == '\\':
+                    i = i + 1
+                    check(i < length, 'Bad (incomplete) character. Error escaping.', line_number)
+                    c = convert_escape(in_str[i], line_number)
                 i = i + 1
-                check(i < length and in_str[i] == '\'', 'Lone " \' "', line_number)
-                token_list.append((NUMBER, ord(in_str[i - 1])))
+                check(i < length and in_str[i] == '\'', 'Invalid character.', line_number)
+                token_list.append((NUMBER, ord(c)))
                 i = i + 1  
             elif in_str[i] == '#':
                 # capture the entire comment, which ends at the new line character.
