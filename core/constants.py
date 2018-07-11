@@ -54,6 +54,7 @@ GETC = 'getc'
 OUTC = 'outc'
 PRINT = 'print'
 INJECT = 'inject'
+MACRO = 'macro'
 
 # These are different, since they instruct the (IR) machine what to do.
 POP = '__pop__'

@@ -706,6 +706,18 @@ main:
 end
 '''
 
+samp25 = '''
+macro  xx 25;
+macro zz 40;
+
+declare xx(a);
+
+main:
+    a = xx + zz;
+end
+
+'''
+
 
 tooheavy = '''
 # Bootstrapping my friend

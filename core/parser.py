@@ -70,6 +70,8 @@ def parse(token_list=[]):
 
     ir_form = []
 
+    macros = {}
+
 
     i = 0
     length = len(token_list)
@@ -83,6 +85,9 @@ def parse(token_list=[]):
         elif tk_type == ID:
             if value in functions:
                 token_list[i] = (OPERATOR, value)
+                continue
+            elif value in macros:
+                token_list[i] = ((NUMBER, macros[value]))
                 continue
             num_stack.append((ID, value))
             effect[-1] += 1
@@ -109,10 +114,15 @@ def parse(token_list=[]):
                 vars_of_func = {}
 
                 ir_form.append((None, SETUP_MAIN))
+            elif value == MACRO:
+                check(not curr_scope_type, 'Cannot define macro within a method.', line_number)
+                i = process_macro(macros, token_list, i, functions, line_number)
+                i = i + 1
+
             elif value == DECLARE:
                 # Process the entire declare here.
                 func_name, args_count, i, line_number\
-                    = process_declare(token_list, i, functions, line_number)
+                    = process_declare(token_list, i, functions, macros, line_number)
                 functions[func_name] = args_count
                 precedence[func_name] = 200
                 args_needed[func_name] = args_count
@@ -494,7 +504,7 @@ def check_operands_exist(operands, variables, line_number):
         check(c != ID or v in variables, 'The variable "{}" has not been'
             ' defined'.format(v), line_number)
 
-def process_declare(token_list, i, functions, line_number):
+def process_declare(token_list, i, functions, macros, line_number):
     """
     Process the entire declare, until the ":".
     token_list is the same token_list being used,
@@ -507,15 +517,17 @@ def process_declare(token_list, i, functions, line_number):
 
     c, v = token_list[i]
 
-    check(c == ID, 'The name {} is reserved or illegal.'.format(v), line_number)
-    check(v not in functions, 'The name {} has been used to declare a function.'
+    check(c == ID, 'The name "{}" is reserved or illegal.'.format(v), line_number)
+    check(v not in functions, 'The name "{}" has been used to declare a function.'
         ' Please use another name.'.format(v), line_number)
+    check(v not in macros, 'The name "{}" has been used to declare a macro.'
+        .format(v), line_number)
 
     func_name = v
     i = i + 1
 
     c, v = token_list[i]
-    check(v == LPAREN, 'Expected "(" here. Got {}.'.format(v),
+    check(v == LPAREN, 'Expected "(" here. Got "{}".'.format(v),
         line_number)
     i = i + 1
     
@@ -528,7 +540,7 @@ def process_declare(token_list, i, functions, line_number):
         # There is at least one argument.
         while True:
             c, v = token_list[i]
-            check(c == ID, 'Malformed function declaration.'.format(c),
+            check(c == ID, 'Malformed function declaration: "{}"?'.format(v),
                 line_number)
             args_count = args_count + 1
             i = i + 1
@@ -671,6 +683,41 @@ def process_define(token_list, i, functions, defined_funcs, line_number):
     i = i + 1
 
     return func_name, param_list, i, line_number
+
+def process_macro(macros, token_list, i, functions, line_number):
+    """
+    Process the macro and insert into macros dictionary.
+    """
+
+    # i points to the keyword macro
+    i += 1
+
+    length = len(token_list)
+    check(i < length, 'Invalid macro (end reached).', line_number)
+
+    t, macro = token_list[i]
+    check(t == ID, 'Invalid macro name: "{}".'.format(macro), line_number)
+    check(macro not in macros, 'Macro "{}" has already been defined.'
+        .format(macro), line_number)
+    check(macro not in functions, 'Macro cannot have the name of a function: "{}".'
+        .format(macro), line_number)
+
+    i += 1
+    check(i < length, 'Invalid macro (no value found).', line_number)
+    t, value = token_list[i]
+    check(t == NUMBER, 'Macro must have numeric literal value, not "{}"'
+        .format(value), line_number)
+
+    i += 1
+    t, semi = token_list[i]
+    check(t == OPERATOR and semi == SEMICOLON, 'Expected semicolon, but found "{}"'
+        .format(semi), line_number)
+
+    macros[macro] = value
+
+    return i
+
+
 
 def generate_label(n, line_number):
     return 'COND_{}_{}_ln_{}'.format(randint(0, 1000), n, line_number)
