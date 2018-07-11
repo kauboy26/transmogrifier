@@ -687,6 +687,29 @@ end
 
 '''
 
+samp24 = '''
+
+main:
+    b = array(51);
+
+    i = 0;
+    while i < 50:
+        mem(b + i) = getc();
+        i = i + 1;
+    end
+
+    mem(b + 50) = 0;
+
+    a = "you have entered: ";
+    print(a);
+    print(b);
+end
+
+
+'''
+
+
+
 tooheavy = '''
 # Bootstrapping my friend
 
@@ -696,9 +719,40 @@ main:
     # The string to evaluate
     # Make sure it is valid, has only '+' and '*',
     # and it ends with a semicolon.
-    str = "12 + 8* 3 * 2 +4;";
+
+    msg = "Type in an expression with only '+' and '*'. Make sure it is valid, and ends with a semicolon.";
+    
+    print(msg);
+
+    str = array(101);
+    i = 0;
+
+    c = getc();
+    while not c == ';' and i < 99:
+        mem(str + i) = c;
+        i = i + 1;
+        c = getc();
+    end
+
+    mem(str + i) = c;
+    mem(str + i + 1) = 0;
 
     a = eval(str);
+
+    # Now to display that.
+    output = "   The result is: ";
+    print(output);
+
+    i = 10000;
+    div = 0;
+
+    while i:
+        div = a / i;
+        outc(div + '0');
+        a = a - div * i;
+        i = i / 10;
+    end
+
 end
 
 

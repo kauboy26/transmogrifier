@@ -4,6 +4,8 @@ declare eval(str);
 
 main:
     # The string to evaluate
+    # Make sure it is valid, has only '+' and '*',
+    # and it ends with a semicolon.
     str = "12 + 8* 3 +4;";
 
     a = eval(str);

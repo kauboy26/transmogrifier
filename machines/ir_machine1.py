@@ -16,6 +16,11 @@ class IRMachine1():
         self.cc = randint(-999, 1000)
 
         self.func_help = None
+
+        # Console IO
+        self.buf_ptr = 0
+        self.buffer = ''
+
         print('Finished creating IR.')
 
     def perform_operation(self, operands, operation, labels, inv_labels):
@@ -56,6 +61,12 @@ class IRMachine1():
             self.mem_arr_assign(operands)
         elif operation == ARR_ASSIGN:
             self.arr_assign(operands)
+        elif operation == GETC:
+            self.getc()
+        elif operation == OUTC:
+            self.outc(operands)
+        elif operation == PRINT:
+            self.puts(operands)
 
         else:
 
@@ -134,7 +145,9 @@ class IRMachine1():
         instructions, labels and inv_labels are assumed to be valid, and the
         IRMachine performs no checks.
         """
-        print('Running...')
+        print('Running...\n')
+        print('Console:\n')
+        print('___________________________________________________\n')
         self.func_help = func_help
         self.pc = 0
 
@@ -145,9 +158,10 @@ class IRMachine1():
             # print(self.pc, ':', operands, instruction)       
             self.perform_operation(operands, instruction, labels, inv_labels)
             # self.print_regs()
-            
+        
+        print('\n__________________________________________________')
 
-        print('Finished running. Executed {} instructions.'.format(num_executed))
+        print('\n\nFinished running. Executed {} instructions.'.format(num_executed))
 
 
     def print_memory(self, low, high):
@@ -446,14 +460,15 @@ class IRMachine1():
         Cleans up the main method, by reclaiming stack space.
         """
 
-        print('Cleaning main method:')
+        # print('\n\n*************************************'
+        #     '\nCleaning main method:')
 
         num_to_del = len(operands)
 
         # Remove from stack frame
         curr_frame = self.stack_frame.pop()
-        for var in operands:
-            print('{} : {}'.format(var, self.memory[self.fp + curr_frame[var]]))
+        # for var in operands:
+        #     print('{} : {}'.format(var, self.memory[self.fp + curr_frame[var]]))
 
         # Reset to original position
         self.sp = -1
@@ -510,6 +525,72 @@ class IRMachine1():
         # print('Returning VALUE: {} to caller.'.format(ret_val))
 
         self._tear_and_return()
+
+    def getc(self):
+        """
+        Gets a single character a pushes it on to the stack. Although only
+        a single character is retrieved at pushed on to the stack at a time,
+        there is a buffer.
+        """
+        while self.buf_ptr >= len(self.buffer):
+            self.buffer = input('>>  ')
+            self.buf_ptr = 0
+
+        c = self.buffer[self.buf_ptr]
+        self.buf_ptr += 1
+
+        self.sp += 1
+        self.memory[self.sp] = ord(c)
+
+        self.pc += 1
+
+    def outc(self, operand):
+        """
+        Prints the ascii character corresponding to the operand's value.
+        """
+
+        t, op = operand
+
+        c = 0
+
+        if t == ID:
+            c = self.memory[self.fp + self.stack_frame[-1][op]]
+        elif t == NUMBER:
+            c = op
+        elif t == STACK_TOP:
+            c = self.memory[self.sp]
+
+        print(chr(c), end='')
+
+        self.pc += 1
+
+    def puts(self, operand):
+        """
+        operand - address of the first letter of the string
+        Keeps printing until a null is encountered.
+        """
+
+        t, op = operand
+
+        ptr = 0
+
+        if t == ID:
+            ptr = self.memory[self.fp + self.stack_frame[-1][op]]
+        elif t == NUMBER:
+            ptr = op
+        elif t == STACK_TOP:
+            ptr = self.memory[self.sp]
+
+
+        # Now print starting from the pointer
+        while self.memory[ptr]:
+            print(chr(self.memory[ptr]), end='')
+            ptr += 1
+
+
+        self.pc += 1
+
+
 
     def _tear_and_return(self):
         """

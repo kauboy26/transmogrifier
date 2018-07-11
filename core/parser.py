@@ -376,7 +376,15 @@ def parse(token_list=[]):
                             c, v = operands[0]
                             check(c != ARR_TYPE, 'Array arguments bad.', line_number)
                             num_stack.append((ARR_TYPE, operands[0]))
-
+                        elif operation == PRINT:
+                            num_stack.append(operands[0])
+                            ir_form.append((operands[0], PRINT))
+                        elif operation == GETC:
+                            num_stack.append((STACK_TOP, '$'))
+                            ir_form.append((None, GETC))
+                        elif operation == OUTC:
+                            num_stack.append(operands[0])
+                            ir_form.append((operands[0], OUTC))
                         continue
 
                     ir_form.append((operands, PUSH))

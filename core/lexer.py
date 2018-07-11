@@ -12,7 +12,8 @@ keywords = {'def': 0, 'if': 0, 'elif': 0,
         'define': 0}
 
 multichar_ops = {'mem': 0, 'addrOf': 0, 'array': 0,
-                'inject': 0, 'print': 0, 'and': 0, 'or': 0, 'not': 0}
+                'inject': 0, 'print': 0, 'and': 0, 'or': 0, 'not': 0,
+                'getc': 0, 'outc': 0}
 
 NUMBER = 0
 KEYWORD = 1
