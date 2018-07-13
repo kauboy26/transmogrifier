@@ -715,9 +715,7 @@ declare xx(a);
 main:
     a = xx + zz;
 end
-
 '''
-
 
 tooheavy = '''
 # Bootstrapping my friend
@@ -729,39 +727,51 @@ main:
     # Make sure it is valid, has only '+' and '*',
     # and it ends with a semicolon.
 
-    msg = "Type in an expression with only '+' and '*'.\\nMake sure it is valid, and ends with a semicolon.\\n>>\\t";
+    msg = "Type in an expression with only '+' and '*'.\\nMake sure it is valid\\n";
+    prompt = "\\n>>\\t";
+    output = "\\nThe result is: ";
     
     print(msg);
+    
 
-    str = array(101);
-    i = 0;
+    str = array(92);
+    done = 0;
 
-    c = getc();
-    while not c == ';' and i < 99:
-        mem(str + i) = c;
-        i = i + 1;
+    
+    while not done:
+        print(prompt);
+        i = 0;
+
         c = getc();
+        while not (c == ';' or c == 'q') and i < 90:
+            mem(str + i) = c;
+            i = i + 1;
+            c = getc();
+        end
+
+        if not c == 'q':
+            mem(str + i) = ';';
+            mem(str + i + 1) = 0;
+
+            a = eval(str);
+
+            # Now to display that.
+            print(output);
+
+            i = 10000;
+            div = 0;
+
+            while i:
+                div = a / i;
+                outc(div + '0');
+                a = a - div * i;
+                i = i / 10;
+            end
+        else:
+            done = 1;
+        end
+    
     end
-
-    mem(str + i) = c;
-    mem(str + i + 1) = 0;
-
-    a = eval(str);
-
-    # Now to display that.
-    output = "\\nThe result is: ";;
-    print(output);
-
-    i = 10000;
-    div = 0;
-
-    while i:
-        div = a / i;
-        outc(div + '0');
-        a = a - div * i;
-        i = i / 10;
-    end
-
 end
 
 

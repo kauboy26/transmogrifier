@@ -138,8 +138,9 @@ def parse(token_list=[]):
                         line_number)
                 ir_form.append(((func_name, param_list), SETUP_FUNC))
 
-                labels[func_name] = len(ir_form) - 1
-                ln_to_label[len(ir_form) - 1] = func_name
+                func_lbl = generate_func_lbl(func_name)
+                labels[func_lbl] = len(ir_form) - 1
+                ln_to_label[len(ir_form) - 1] = func_lbl
                 n_lbl += 1
 
                 vars_this_block.append(param_list[:])
@@ -397,7 +398,7 @@ def parse(token_list=[]):
                         continue
 
                     ir_form.append((operands, PUSH))
-                    ir_form.append((operation, JROUTINE))
+                    ir_form.append((generate_func_lbl(operation), JROUTINE))
                     ir_form.append((operands, FETCH_RV))
                     num_stack.append((STACK_TOP, '$'))
                     continue
@@ -684,6 +685,7 @@ def process_define(token_list, i, functions, defined_funcs, line_number):
 
     return func_name, param_list, i, line_number
 
+
 def process_macro(macros, token_list, i, functions, line_number):
     """
     Process the macro and insert into macros dictionary.
@@ -718,6 +720,8 @@ def process_macro(macros, token_list, i, functions, line_number):
     return i
 
 
+def generate_func_lbl(func_name):
+    return 'F_{}'.format(func_name)
 
 def generate_label(n, line_number):
     return 'COND_{}_{}_ln_{}'.format(randint(0, 1000), n, line_number)
