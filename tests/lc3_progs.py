@@ -1,11 +1,10 @@
 lsamp1 = '''
 
 main:
-    a = 13;
-    a = a + 3;
-    a = a - 2;
-    b = 14;
-    c = a * b;
+    a = 10;
+    b = 11;
+    if b < a:
+        a = 19;
+    end
 end
-
 '''

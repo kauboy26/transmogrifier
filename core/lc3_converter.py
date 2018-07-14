@@ -5,7 +5,7 @@ class LC3Converter():
 
     def __init__(self, instructions, labels, inv_labels, func_help):
 
-        self.topreg = False
+        self.top_reg = False
         self.lc3_instructions = []
         self.stack_frame = [{}]
 
@@ -14,13 +14,27 @@ class LC3Converter():
         self.inv_labels = inv_labels
         self.func_help = func_help
 
+        self.table = {}
+        self.table_print = []
+
+        self.init_table()
+
     def convert(self):
 
         tree = []
-        for i in self.instructions:
-            tree.append((i, self.convert_operation(i)))
+        total_len = 0
 
-        return tree
+        for n, i in enumerate(self.instructions):
+            if n in self.inv_labels:
+                lbl = self.inv_labels[n]
+                table_index = self.table[lbl]
+                self.table_print[table_index] = (lbl, total_len)
+
+            block = self.convert_operation(i)
+            total_len += len(block)
+            tree.append((i, block))
+
+        return tree, self.table_print
 
     def convert_operation(self, instruction):
         """
@@ -44,6 +58,20 @@ class LC3Converter():
             return self.gen_minus(operands)
         elif operation == MULTI:
             return self.gen_mult(operands)
+        elif operation == LTHAN:
+            return self.gen_lthan(operands)
+        elif operation == GTHAN:
+            return self.gen_gthan(operands)
+        elif operation == LTHANEQ:
+            return self.gen_lthaneq(operands)
+        elif operation == GTHANEQ:
+            return self.gen_gthaneq(operands)
+        elif operation == DOUBLE_EQ:
+            return self.gen_doubeq(operands)
+        elif operation == LOAD_CC:
+            return self.gen_loadcc(operands)
+        elif operation == COND_BRANCH:
+            return self.gen_condbranch(operands)
 
 
     def gen_setup_main(self, operands):
@@ -77,7 +105,7 @@ class LC3Converter():
         return instr
 
     def gen_clean_main(self, operands):
-        instr = [ ( LADDI, (SP, FP, -1 )) ]
+        instr = [ ( LADDI, (SP, FP, 1 )) ]
         return instr
 
     def gen_assign(self, operands):
@@ -93,8 +121,10 @@ class LC3Converter():
         t0, var = operands[1]
 
         if t1 == STACK_TOP:
-            # The value is already in R0
+            # Eat from stack
+            self.top_reg = False
 
+            # The value is already in R0
             val_reg = OP0
             loc_reg = OP1
 
@@ -134,8 +164,17 @@ class LC3Converter():
         t0, op0 = operands[1]
         t1, op1 = operands[0]
 
+        if t0 != STACK_TOP and t1 != STACK_TOP:
+            if self.top_reg:
+                instr += self.gen_single_push(ACCUM)
+                self.top_reg = False
+       
+
         if t0 == NUMBER and t1 == NUMBER:
-            instr += self.smart_set(op0 * op1)
+
+            instr += self.smart_set(ACCUM, op0 + op1)
+
+            self.top_reg = True
             return instr
 
 
@@ -147,6 +186,7 @@ class LC3Converter():
             # add them together and store in accumulator
             instr += [ ( LADDR, (ACCUM, OP0, OP1) ) ]
 
+            self.top_reg = True
             return instr
 
 
@@ -166,6 +206,7 @@ class LC3Converter():
             # Add them together and put in accumulator
             instr += [ ( LADDR, ( ACCUM, OP0, OP1 ) ) ]
 
+            self.top_reg = True
             return instr
 
 
@@ -182,6 +223,7 @@ class LC3Converter():
 
         instr += [ ( LADDR, (ACCUM, OP0, OP1 )) ]
 
+        self.top_reg = True
         return instr
 
     def gen_minus(self, operands):
@@ -194,8 +236,16 @@ class LC3Converter():
         t0, op0 = operands[1]
         t1, op1 = operands[0]
 
+        if t0 != STACK_TOP and t1 != STACK_TOP:
+            if self.top_reg:
+                instr += self.gen_single_push(ACCUM)
+                self.top_reg = False
+        
+
         if t0 == NUMBER and t1 == NUMBER:
-            instr += self.smart_set(op0 - op1)
+
+            instr += self.smart_set(ACCUM, op0 - op1)
+            self.top_reg = True
             return instr
 
 
@@ -211,6 +261,7 @@ class LC3Converter():
             # add them together and store in accumulator
             instr += [ ( LADDR, (ACCUM, OP0, OP1) ) ]
 
+            self.top_reg = True
             return instr
 
 
@@ -233,6 +284,7 @@ class LC3Converter():
             # Add them together and put in accumulator
             instr += [ ( LADDR, ( ACCUM, OP0, OP1 ) ) ]
 
+            self.top_reg = True
             return instr
 
 
@@ -252,6 +304,7 @@ class LC3Converter():
 
         instr += [ ( LADDR, (ACCUM, OP0, OP1 )) ]
 
+        self.top_reg = True
         return instr
 
     def gen_lthan(self, operands):
@@ -260,11 +313,14 @@ class LC3Converter():
     def gen_gthan(self, operands):
         # a > b
         # res = a - b
+        # This will take care of pushing to stack.
         instr = self.gen_minus(operands)
 
         # if res <= 0 set ACCUM = 0
         instr += [ ( LBR, ( 'p', 1 )) ]
         instr += [ ( LADDI, ( ACCUM, ZERO, 0) ) ]
+
+        return instr
 
 
     def gen_lthaneq(self, operands):
@@ -284,9 +340,10 @@ class LC3Converter():
         # else set ACCUM = 1
         instr += [ ( LADDI, (ACCUM, ZERO, 1)) ]
 
+        return instr
 
     def gen_doubeq(self, operands):
-        instr = self.gen_mins(operands)
+        instr = self.gen_minus(operands)
 
         # res = a - b
 
@@ -331,7 +388,15 @@ class LC3Converter():
         t0, op0 = operands[1]
         t1, op1 = operands[0]
 
+
+        if t0 != STACK_TOP and t1 != STACK_TOP:
+            if self.top_reg:
+                instr += self.gen_single_push(ACCUM)
+                self.top_reg = False
+
+
         if t0 == NUMBER and t1 == NUMBER:
+            self.top_reg = True
             return self.smart_set(ACCUM, op0 * op1)
 
         if t0 == STACK_TOP and t1 == STACK_TOP:
@@ -366,10 +431,14 @@ class LC3Converter():
         # If it's negative, flip it first
         # The second was always loaded last
 
-        # if OP1 < 0 then OP1 = - OP1
-        # instr += [ ( LBR, ( 'zp', 2 ) ) ]
-        # instr += [ ( NOT, (OP1, OP1) )]
-        # instr += [ ( LADDI, (OP1, OP1, 1) )]
+        # if OP1 < 0 then
+            # OP1 = - OP1
+            # OP0 = - OP0
+        instr += [ ( LBR, ( 'zp', 4 ) ) ]
+        instr += [ ( NOT, (OP1, OP1) )] 
+        instr += [ ( LADDI, (OP1, OP1, 1) )]
+        instr += [ ( NOT, (OP0, OP0) )] 
+        instr += [ ( LADDI, (OP0, OP0, 1) )]
 
 
         # Now we have the counter ready, use TEMP to store mult result
@@ -387,6 +456,7 @@ class LC3Converter():
         # put the result into accumulator
         instr += [ (LADDI, (ACCUM, TEMP, 0)) ]
 
+        self.top_reg = True
         return instr
 
 
@@ -399,12 +469,60 @@ class LC3Converter():
     def gen_halt(self):
         return [ (LHALT, None) ]
 
+    def gen_pop(self, num):
+        """
+        """
+        if self.top_reg:
+            self.top_reg = False
+            num -= 1
+
+        if num == 0:
+            return []
+
+        return self.smart_add(SP, SP, num)
+
+    def gen_loadcc(self, operand):
+        """
+        If '$', don't do anything. It is guaranteed to have been
+        the last thing put into a register.
+        """
+        t, op = operand
+
+        if t == STACK_TOP:
+            self.top_reg = False
+            return []
+        elif t == ID:
+            return self.read_var(ACCUM, op)
+        elif t == NUMBER:
+            return self.smart_set(ACCUM, op)
+
+    def gen_single_push(self, register):
+        """
+        Pushes the value in the register on to the stack (updates
+        stack pointer as well)
+        """
+        instr =  [ ( LADDI, ( SP, SP, -1 )) ]
+        instr += [ ( LSTR, ( register, SP, 0 ))]
+        return instr
+
+
+    def gen_condbranch(self, operands):
+        """
+        """
+        lbl = operands
+
+        rt_inst = self.read_table(ACCUM, lbl)
+
+        instr = [ ( LBR, ( 'np', len(rt_inst) + 1) ) ]
+        instr += rt_inst
+        instr += [ ( LJMP, (ACCUM) )]
+
+        return instr
 
     def smart_add(self, dest_reg, src_reg, number):
         """
         Adds a fixed amount to a number
         """
-        
         return [(LADDI, (dest_reg, src_reg, number))]
 
     def smart_set(self, target_reg, value):
@@ -413,15 +531,27 @@ class LC3Converter():
         """
         instr = []
 
-        if value == 0:
-            instr += [ ( LADDI, (target_reg, ZERO, 0))]
-            return instr
-
-        if value >= -16 and value < 15:
+        if -16 <= value <= 15:
             instr += [ ( LADDI, (target_reg, ZERO, value))]
             return instr
 
-        # Otherwise do smart thing
+        # For now just let it loop, I'll write a better version later
+        if value < -16:
+            instr += [ ( LADDI, (target_reg, ZERO, -16))]
+            value += 16
+            while value < -16:
+                instr += [ ( LADDI, (target_reg, target_reg, -16))]
+                value += 16
+            instr += [ ( LADDI, (target_reg, target_reg, value ))]
+        else:
+            instr += [ ( LADDI, (target_reg, ZERO, 15))]
+            value -= 15
+            while value > 15:
+                instr += [ ( LADDI, (target_reg, target_reg, 15))]
+                value -=15
+            instr += [ ( LADDI, (target_reg, target_reg, value ))]
+
+        return instr
 
     def read_var(self, target_reg, var):
         """
@@ -434,3 +564,33 @@ class LC3Converter():
         instr += [ ( LLDR, ( target_reg, target_reg, 0) )]
 
         return instr
+
+    def read_table(self, target_reg, lbl):
+        """
+        Puts the value at that label into the target register
+        """
+        dist_to_entry = self.table[self.resolve_lbl(lbl)]
+        instr = self.smart_add(target_reg, TABLE, dist_to_entry)
+        instr += [ ( LLDR, ( target_reg, target_reg, 0) )]
+        return instr
+
+    def resolve_lbl(self, lbl):
+        """
+        Resolves multiple labels that point to the same thing.
+        """
+        return self.inv_labels[self.labels[lbl]]
+
+
+    def init_table(self):
+        """
+        """
+        self.table = {}
+        self.table_print = []
+
+        i = 0
+        for lbl, ln in self.labels.items():
+            rlbl = self.resolve_lbl(lbl)
+            if rlbl not in self.table:
+                self.table[rlbl] = i
+                self.table_print.append((rlbl, 0))
+                i += 1

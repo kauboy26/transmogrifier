@@ -483,6 +483,7 @@ def parse(token_list=[]):
     # I think this may cause the user a lot of grief. A missing semicolon on one
     # line may not get detected until much much later. Perhaps this message needs
     # to be broadcast elsewhere.
+    check(not curr_scope_type, 'Mismatched "end" (missing at end of file?)', line_number)
     check(not op_stack and not num_stack, 'Missing semicolon?', line_number)
 
     return ir_form, labels, ln_to_label, func_help

@@ -16,9 +16,7 @@ def convert_nzp(nzp):
     return cc
 
 def value_to_cc(value):
-    cc = 'cannot be'
-
-    print('CC sir', value, type(value))
+    cc = 0
 
     if value < 0:
         cc = 1 << 2
@@ -56,26 +54,39 @@ class LC3Machine():
         self.memory[self.orig - 1] = 0xF000
         self.memory[self.orig - 2] = 0x2000
 
+        self.write_table(table)
+
         self.pc = 0
         self.is_running = True
 
-        # Write the table at 0x2000
-        i = 0x2000
-        for label, address in table:
-            self.memory[i] = address
-            i = i + 1
+        
 
         instr_len = len(instructions)
-        
+        executed = 0
+
         while self.is_running:
             assert(0 <= self.pc < instr_len)
 
             instruction, operands = instructions[self.pc]
             self.pc += 1
 
-            print(instruction, operands)
+            print(self.pc - 1, ':', instruction, operands, '........')
             self.perform_operation(instruction, operands)
+            executed += 1
             self.print_regs()
+
+        print('Executed', executed, 'instructions.')
+
+
+    def write_table(self, table):
+        """
+        Writes the label table at x2000. Adds x3000 to all the entries.
+        """
+        i = 0x2000
+
+        for lbl, val in table:
+            self.memory[i] = val
+            i += 1
 
     def print_memory(self, low, high):
         for i in range(low, high):
@@ -110,6 +121,8 @@ class LC3Machine():
             self.st(operands)
         elif instruction == LBR:
             self.br(operands)
+        elif instruction == LJMP:
+            self.jmp(operands)
         elif instruction == LHALT:
             self.halt()
 
@@ -119,7 +132,6 @@ class LC3Machine():
         assert(-16 <= imm <= 15)
         self.registers[dest] = self.registers[src] + imm
 
-        print('Finding cc')
         self.CC = value_to_cc(self.registers[dest])
 
     def addr(self, operands):
