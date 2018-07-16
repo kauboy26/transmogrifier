@@ -47,13 +47,18 @@ samp3 = '''
 
 declare sum(n);
 declare fact(n);
+declare thing();
 
 main:
-    a = fact(8);
+    a = fact(thing() + 2 * -thing() + 3 * thing());
 
     # Assert
     mem(100) = sum(20); # 210
     mem(101) = a;       # 40320
+end
+
+def thing():
+    return 4;
 end
 
 def sum(n):
