@@ -12,7 +12,8 @@ def parse(token_list=[]):
     # For now just do some crap testing
     # Not too sure of some of these, such as comma vs semicolon. As far as I can
     # see right now, there won't be a time when the two will be compared.
-    precedence = {MULTI: 150, DIVIS: 150, MODULO: 150, PLUS: 130, MINUS: 130,
+    precedence = {  UNARY_MINUS: 152,
+                    MULTI: 150, DIVIS: 150, MODULO: 150, PLUS: 130, MINUS: 130,
                     NOT: 110, AND: 100, OR: 99, LTHAN: 120, GTHAN:120, LTHANEQ: 120,
                     GTHANEQ: 120, DOUBLE_EQ: 120, EQUAL: 80, COMMA: 70, SEMICOLON: 70,
                     COLON: 70,
@@ -22,16 +23,18 @@ def parse(token_list=[]):
                     OUTC: 200, INJECT: 200}
 
 
-    args_needed = {MULTI: 2, DIVIS: 2, MODULO: 2, PLUS: 2, MINUS: 2, NOT: 1,
+    args_needed = { UNARY_MINUS: 1,
+                    MULTI: 2, DIVIS: 2, MODULO: 2, PLUS: 2, MINUS: 2, NOT: 1,
                     AND: 2, OR: 2, LTHAN: 2, GTHAN: 2, GTHANEQ: 2, LTHANEQ: 2,
                     DOUBLE_EQ: 2, EQUAL: 2,
                     MEM: 1, ADDRESS_OF: 1,
                     ARRAY: 1, GETC: 0, PRINT: 1, OUTC: 1, INJECT: 1}
 
-    primitive_functions = {MEM: 0, ADDRESS_OF: 0, ARRAY: 0, GETC: 0,
+    primitive_functions = { MEM: 0, ADDRESS_OF: 0, ARRAY: 0, GETC: 0,
                             INJECT: 0, PRINT: 0, OUTC: 0}
 
-    effect_of = {MULTI: -1, DIVIS: -1, MODULO: -1, PLUS: -1, MINUS: -1, NOT: 0,
+    effect_of = {   UNARY_MINUS: 0,
+                    MULTI: -1, DIVIS: -1, MODULO: -1, PLUS: -1, MINUS: -1, NOT: 0,
                     AND: -1, OR: -1, LTHAN: -1, GTHAN: -1, GTHANEQ: -1, LTHANEQ: -1,
                     DOUBLE_EQ: -1, EQUAL: -1, MEM: 0, ADDRESS_OF: 0,
                     ARRAY: 0, GETC: 1, INJECT: 0, PRINT: 0, OUTC: 0}
@@ -304,15 +307,13 @@ def parse(token_list=[]):
 
             if (value == PLUS or value == MINUS) and effect[-1] == 0:
                 if value == MINUS:
-                    num_stack.append((NUMBER, -1))
-                    effect[-1] += 1
-                    value = MULTI
-                else: # value == PLUS
-                    # Skip this iteration. Basically fuck the extra plus sign.
-                    i = i + 1
-                    continue
+                    op_stack.append(UNARY_MINUS)
+                    # effect[-1] += effect_of[UNARY_MINUS] -- Does nothing
+                # In case of a plus, just skip it.
+                i = i + 1
+                continue
 
-            if value == NOT:
+            if value == NOT or value == B_NOT:
                 # see note 1.
                 op_stack.append(value)
                 # effect[-1] += effect_of[NOT] -- Does nothing

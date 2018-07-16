@@ -37,6 +37,8 @@ LTHANEQ = '<='
 GTHANEQ = '>='
 DOUBLE_EQ = '=='
 
+UNARY_MINUS = 'um'
+
 MEM = 'mem'
 ADDRESS_OF = 'addrOf'
 ARRAY = 'array'

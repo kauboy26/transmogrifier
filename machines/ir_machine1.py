@@ -82,6 +82,8 @@ class IRMachine1():
                 val = int(not op0)
             elif operation == B_NOT:
                 val = int(~op0)
+            elif operation == UNARY_MINUS:
+                val = - op0
 
             else:
                 op0 = vals[1]
