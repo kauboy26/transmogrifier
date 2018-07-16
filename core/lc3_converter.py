@@ -52,6 +52,8 @@ class LC3Converter():
             return self.gen_clean_main(operands)
         elif operation == EQUAL:
             return self.gen_assign(operands)
+        elif operation == UNARY_MINUS:
+            return self.gen_unary_minus(operands)
         elif operation == PLUS:
             return self.gen_plus(operands)
         elif operation == MINUS:
@@ -72,6 +74,8 @@ class LC3Converter():
             return self.gen_loadcc(operands)
         elif operation == COND_BRANCH:
             return self.gen_condbranch(operands)
+        elif operation == BRANCH:
+            return self.gen_uncond_branch(operands)
 
 
     def gen_setup_main(self, operands):
@@ -164,10 +168,11 @@ class LC3Converter():
         t0, op0 = operands[1]
         t1, op1 = operands[0]
 
-        if t0 != STACK_TOP and t1 != STACK_TOP:
-            if self.top_reg:
-                instr += self.gen_single_push(ACCUM)
-                self.top_reg = False
+        if t0 != STACK_TOP and t1 != STACK_TOP\
+            and self.top_reg:
+
+            instr += self.gen_single_push(ACCUM)
+            self.top_reg = False
        
 
         if t0 == NUMBER and t1 == NUMBER:
@@ -220,11 +225,11 @@ class LC3Converter():
 
     def gen_gthan(self, operands):
         # a > b
-        # res = a - b
+        # R0 = a - b
         # This will take care of pushing to stack.
         instr = self.gen_minus(operands)
 
-        # if res <= 0 set ACCUM = 0
+        # if R0 <= 0 set ACCUM = 0
         instr += [ ( LBR, ( 'p', 1 )) ]
         instr += [ ( LADDI, ( ACCUM, ZERO, 0) ) ]
 
@@ -232,15 +237,15 @@ class LC3Converter():
 
 
     def gen_lthaneq(self, operands):
-        return self.gen_gthaneq(oerands[::-1])
+        return self.gen_gthaneq(operands[::-1])
 
 
     def gen_gthaneq(self, operands):
         # a >= b
-        # res = a - b
+        # R0 = a - b
         instr = self.gen_minus(operands)
 
-        # if res < 0 set ACCUM = 0
+        # if R0 < 0 set ACCUM = 0
         instr += [ ( LBR, ( 'zp', 2 )) ]
         instr += [ ( LADDI, ( ACCUM, ZERO, 0) ) ]
         instr += [ ( LBR, ( 'nzp', 1) ) ]
@@ -296,16 +301,15 @@ class LC3Converter():
         t0, op0 = operands[1]
         t1, op1 = operands[0]
 
-
-        if t0 != STACK_TOP and t1 != STACK_TOP:
-            if self.top_reg:
-                instr += self.gen_single_push(ACCUM)
-                self.top_reg = False
+        if t0 != STACK_TOP and t1 != STACK_TOP and self.top_reg:
+            instr += self.gen_single_push(ACCUM)
+            self.top_reg = False
 
 
         if t0 == NUMBER and t1 == NUMBER:
+            instr += self.smart_set(ACCUM, op0 * op1)
             self.top_reg = True
-            return self.smart_set(ACCUM, op0 * op1)
+            return instr
 
 
         instr = self.fetch_two_operands(operands)
@@ -355,6 +359,13 @@ class LC3Converter():
 
     def gen_pop(self, num):
         """
+        If there is already a value in R0 (head of stack), then
+        simply mark R0 as empty.
+
+        After that, pop "n - 1" items from the real, physical stack.
+
+        This method is not be used in cases when top_reg is being 
+        turned off manually.
         """
         if self.top_reg:
             self.top_reg = False
@@ -364,6 +375,20 @@ class LC3Converter():
             return []
 
         return self.smart_add(SP, SP, num)
+
+    def gen_physical_pop(self, num):
+        """
+        Simply reclaims "num" space from the physical stack.
+        
+        DOES NOT INCLUDE R0!
+        DOES NOT LOOK AT TOP_REG!
+        """
+
+        if num == 0:
+            return []
+
+        return self.smart_add(SP, SP, num)
+
 
     def gen_loadcc(self, operand):
         """
@@ -384,6 +409,12 @@ class LC3Converter():
 
     def gen_condbranch(self, operands):
         """
+        The condition code is assumed to have been set in
+        a prior LOAD_CC.
+        If the CC value is NOT 0, then the branch is not taken.
+
+        if CC != 0 do {body} else branch
+
         """
         lbl = operands
 
@@ -394,6 +425,18 @@ class LC3Converter():
         instr += [ ( LJMP, (ACCUM) )]
 
         return instr
+
+    def gen_uncond_branch(self, operands):
+        """
+        Branches to the point specified by the label.
+        """
+        lbl = operands
+
+        instr = self.read_table(ACCUM, lbl)
+        instr += [ ( LJMP, (ACCUM) )]
+
+        return instr
+
 
     def smart_add(self, dest_reg, src_reg, number):
         """
@@ -452,9 +495,13 @@ class LC3Converter():
 
         Precondition: R0 is free to use
         """
-        assert(not self.top_reg)
 
         instr = []
+
+        t0, op0 = operands[1]
+        t1, op1 = operands[0]
+
+        assert(not (t0 != STACK_TOP and t1 != STACK_TOP and self.top_reg))
 
         if t0 == STACK_TOP and t1 == STACK_TOP:
             
@@ -464,11 +511,11 @@ class LC3Converter():
             else:
                 instr += [ ( LLDR, ( OP1 ,SP, 0 ) ) ]
 
-            instr += self.gen_pop(1)
+            instr += [ ( LADDI, (SP, SP, 1) ) ] # Pop
 
         elif t0 == STACK_TOP or t1 == STACK_TOP:
             tt = t1 if t0 == STACK_TOP else t0
-            op = op1 if t0 == STACK_TOP else op0
+            opt = op1 if t0 == STACK_TOP else op0
 
             if tt == NUMBER:
                 instr += self.smart_set(OP1, opt)
