@@ -45,7 +45,25 @@ end
 lsamp3 = '''
 
 main:
-    a = (12 + 12) + (1 + 1 - 1 - 1) + 1;
+    b = 12;
+    a = (12 + 12) + (b + b - b - b) + 1;
+
+    # a should be 25
+    # b should be 12
+end
+
+'''
+
+lsamp4 = '''
+
+main:
+    a = 10;
+    b = 20;
+
+    if a + b > b + b and not not b + 20 or (b - b) or not 28:
+        b = 30;
+    end
+
 end
 
 '''

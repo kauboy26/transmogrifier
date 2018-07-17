@@ -1,3 +1,15 @@
+"""
+Checklist:
+
+At the end of all operations, top_reg is set to True. At the
+beginning of all operations, top_reg is checked, and things are
+pushed down on to the stack if needed, etc.
+
+"instr = " vs "instr += " bug in some places
+
+"""
+
+
 from core.constants import *
 from core.lc3_consts import *
 
@@ -70,6 +82,12 @@ class LC3Converter():
             return self.gen_gthaneq(operands)
         elif operation == DOUBLE_EQ:
             return self.gen_doubeq(operands)
+        elif operation == AND:
+            return self.gen_and(operands)
+        elif operation == OR:
+            return self.gen_or(operands)
+        elif operation == NOT:
+            return self.gen_not(operands)
         elif operation == LOAD_CC:
             return self.gen_loadcc(operands)
         elif operation == COND_BRANCH:
@@ -181,7 +199,7 @@ class LC3Converter():
             return instr
 
 
-        instr = self.fetch_two_operands(operands)
+        instr += self.fetch_two_operands(operands)
 
         instr += [ ( LADDR, (ACCUM, OP0, OP1 )) ]
 
@@ -209,7 +227,7 @@ class LC3Converter():
             self.top_reg = True
             return instr
 
-        instr = self.fetch_two_operands(operands, commutative=False)
+        instr += self.fetch_two_operands(operands, commutative=False)
 
         # Invert the second value
         instr += [ ( NOT, (OP1, OP1)) ]
@@ -312,16 +330,16 @@ class LC3Converter():
             return instr
 
 
-        instr = self.fetch_two_operands(operands)
+        instr += self.fetch_two_operands(operands)
         # At this point, would've loaded the two operands into OP0 and OP1
         # Pick on the second to be the counter variable
 
         # If it's negative, flip it first
-        # The second was always loaded last
 
         # if OP1 < 0 then
             # OP1 = - OP1
             # OP0 = - OP0
+        instr += [ ( LADDI, (OP1, OP1, 0) )] # reload cc
         instr += [ ( LBR, ( 'zp', 4 ) ) ]
         instr += [ ( NOT, (OP1, OP1) )] 
         instr += [ ( LADDI, (OP1, OP1, 1) )]
@@ -353,6 +371,112 @@ class LC3Converter():
 
     def gen_modulo(self, operands):
         return None
+
+    def gen_and(self, operands):
+        """
+        a, b
+
+        if a:
+            return b
+        else:
+            return a (which is 0)
+
+        """
+
+        instr = []
+
+        t0, op0 = operands[1]
+        t1, op1 = operands[0]
+
+        if t0 != STACK_TOP and t1 != STACK_TOP and self.top_reg:
+            instr += self.gen_single_push(ACCUM)
+            self.top_reg = False
+
+
+        if t0 == NUMBER and t1 == NUMBER:
+            instr += self.smart_set(ACCUM, int(op0 and op1))
+            self.top_reg = True
+            return instr
+
+        instr += self.fetch_two_operands(operands)
+
+        instr += [ ( LADDI, (OP0, OP0, 0) )]
+        instr += [ ( LBR, ('z', 1) )]
+
+        instr += [ ( LADDI, ( OP0, OP1, 0 )) ]
+
+        self.top_reg = True
+        return instr
+
+
+    def gen_or(self, operands):
+        """
+        a, b
+
+        if a == 0:
+            return b
+        else:
+            return a (non zero)
+        """
+
+        instr = []
+
+        t0, op0 = operands[1]
+        t1, op1 = operands[0]
+
+        if t0 != STACK_TOP and t1 != STACK_TOP and self.top_reg:
+            instr += self.gen_single_push(ACCUM)
+            self.top_reg = False
+
+
+        if t0 == NUMBER and t1 == NUMBER:
+            instr += self.smart_set(ACCUM, int(op0 or op1))
+            self.top_reg = True
+            return instr
+
+        instr += self.fetch_two_operands(operands)
+
+        instr += [ ( LADDI, (OP0, OP0, 0) )]
+        instr += [ ( LBR, ('np', 1) )]
+
+        instr += [ ( LADDI, ( OP0, OP1, 0 )) ]
+
+        self.top_reg = True
+        return instr
+
+
+    def gen_not(self, operands):
+        """
+        a
+        if a:
+            return 0
+        else:
+            return 1
+        """
+
+        t, op = operands[0]
+        instr = []
+
+        if t != STACK_TOP and self.top_reg:
+            instr += self.gen_single_push(ACCUM)
+            self.top_reg = False
+
+        if t == NUMBER:
+            instr += [ ( LADDI, (OP0, ZERO, int(not op) ))]
+            self.top_reg = True
+            return instr
+
+        instr += self.fetch_one_operand(operands[0])
+
+        instr += [ ( LADDI, (OP0, OP0, 0) )] # reload CC
+        instr += [ ( LBR, ('z', 2 ) )]
+        instr += [ ( LADDI, (OP0, ZERO, 0) )]
+        instr += [ ( LBR, ('nzp', 1 ) )]
+        instr += [ ( LADDI, (OP0, ZERO, 1) )]
+
+        self.top_reg = True
+        return instr
+
 
     def gen_halt(self):
         return [ (LHALT, None) ]
@@ -394,8 +518,20 @@ class LC3Converter():
         """
         If '$', don't do anything. It is guaranteed to have been
         the last thing put into a register.
+
+        Of course, it will load CC so the order is maintained
+        (unlike fetch_one_operand)
         """
-        return self.fetch_one_operand(operand)
+        t, op = operand
+
+        if t == STACK_TOP:
+            assert(self.top_reg)
+            self.top_reg = False
+            return [ ( LADDI, ( OP0, OP0, 0) ) ]
+        elif t == ID:
+            return self.read_var(ACCUM, op)
+        elif t == NUMBER:
+            return self.smart_set(ACCUM, op)
 
     def gen_single_push(self, register):
         """
@@ -442,7 +578,28 @@ class LC3Converter():
         """
         Adds a fixed amount to a number
         """
-        return [(LADDI, (dest_reg, src_reg, number))]
+        
+        if -16 <= number <= 15:
+            return [(LADDI, (dest_reg, src_reg, number))]
+
+        instr = []
+
+        if number < -16:
+            instr += [(LADDI, (dest_reg, src_reg, -16))]
+            number += 16
+            while number < -16:
+                instr += [(LADDI, (dest_reg, dest_reg, -16))]
+                number += 16
+            instr += [(LADDI, (dest_reg, dest_reg, number))]
+        else:
+            instr += [(LADDI, (dest_reg, src_reg, 15))]
+            number += 15
+            while number > 15:
+                instr += [(LADDI, (dest_reg, dest_reg, 15))]
+                number -= 15
+            instr += [(LADDI, (dest_reg, src_reg, number))]
+
+        return instr
 
     def smart_set(self, target_reg, value):
         """
@@ -474,11 +631,19 @@ class LC3Converter():
 
     def fetch_one_operand(self, operand):
         """
-        Puts the operand into R0. In case of a '$', does nothing.
+        Puts the operand into R0. In case of a '$', does nothing, since
+        the top of the stack MUST be in R0.
+
+        DOES not guarantee anything about load order. CCs must be reset
+        for safety. This is important in cases where the stack is
+        manipulated after a function call:
+            Return value is fetched, then  the stack is cleaned up. Therefore
+        SP is last loaded.
         """
         t, op = operand
 
         if t == STACK_TOP:
+            assert(self.top_reg)
             self.top_reg = False
             return []
         elif t == ID:
@@ -494,6 +659,10 @@ class LC3Converter():
         is put into R0 and the second operand into R1.
 
         Precondition: R0 is free to use
+
+        There are NO guarantees made regarding the last register to
+        be loaded. There are outcomes when R0 was loaded last, R1 was
+        loaded last, and SP was loaded last.
         """
 
         instr = []
