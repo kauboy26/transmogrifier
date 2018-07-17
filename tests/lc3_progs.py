@@ -54,15 +54,32 @@ end
 
 '''
 
-lsamp4 = '''
+lsamp5 = '''
 
 main:
     a = 10;
     b = 20;
+    c = 7;
+    d = 8;
+    e = c & d;
+    f = c | d;
 
     if a + b > b + b and not not b + 20 or (b - b) or not 28:
         b = 30;
     end
+
+end
+
+'''
+
+lsamp4 = '''
+
+main:
+    c = 7;
+    d = 8;
+    e = c & d;
+    f = c | d;
+    g = (~f) + 1;
 
 end
 

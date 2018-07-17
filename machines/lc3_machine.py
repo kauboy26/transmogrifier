@@ -70,10 +70,10 @@ class LC3Machine():
             instruction, operands = instructions[self.pc]
             self.pc += 1
 
-            # print(self.pc - 1, ':', instruction, operands, '........')
+            print(self.pc - 1, ':', instruction, operands, '........')
             self.perform_operation(instruction, operands)
             executed += 1
-            # self.print_regs()
+            self.print_regs()
 
         print('Executed', executed, 'instructions.')
 

@@ -88,6 +88,12 @@ class LC3Converter():
             return self.gen_or(operands)
         elif operation == NOT:
             return self.gen_not(operands)
+        elif operation == B_AND:
+            return self.gen_b_and(operands)
+        elif operation == B_OR:
+            return self.gen_b_or(operands)
+        elif operation == B_NOT:
+            return self.gen_b_not(operands)
         elif operation == LOAD_CC:
             return self.gen_loadcc(operands)
         elif operation == COND_BRANCH:
@@ -230,7 +236,7 @@ class LC3Converter():
         instr += self.fetch_two_operands(operands, commutative=False)
 
         # Invert the second value
-        instr += [ ( NOT, (OP1, OP1)) ]
+        instr += [ ( LNOT, (OP1, OP1)) ]
         instr += [ (LADDI, (OP1, OP1, 1)) ]
 
         instr += [ ( LADDR, (ACCUM, OP0, OP1 )) ]
@@ -341,9 +347,9 @@ class LC3Converter():
             # OP0 = - OP0
         instr += [ ( LADDI, (OP1, OP1, 0) )] # reload cc
         instr += [ ( LBR, ( 'zp', 4 ) ) ]
-        instr += [ ( NOT, (OP1, OP1) )] 
+        instr += [ ( LNOT, (OP1, OP1) )] 
         instr += [ ( LADDI, (OP1, OP1, 1) )]
-        instr += [ ( NOT, (OP0, OP0) )] 
+        instr += [ ( LNOT, (OP0, OP0) )] 
         instr += [ ( LADDI, (OP0, OP0, 1) )]
 
 
@@ -477,6 +483,95 @@ class LC3Converter():
         self.top_reg = True
         return instr
 
+
+    def gen_b_and(self, operands):
+        """
+        a, b
+
+        return a & b
+        """
+
+        instr = []
+
+        t0, op0 = operands[1]
+        t1, op1 = operands[0]
+
+        if t0 != STACK_TOP and t1 != STACK_TOP and self.top_reg:
+            instr += self.gen_single_push(ACCUM)
+            self.top_reg = False
+
+
+        if t0 == NUMBER and t1 == NUMBER:
+            instr += self.smart_set(ACCUM, int(op0 & op1))
+            self.top_reg = True
+            return instr
+
+        instr += self.fetch_two_operands(operands)
+        instr += [ ( LANDR, (OP0, OP0, OP1 ))]
+
+        self.top_reg = True
+        return instr
+
+    def gen_b_or(self, operands):
+        """
+        a, b
+
+        return a | b
+
+        This method uses de Morgan's law. So really, it does
+            ~(~a & ~b).
+        """
+
+        instr = []
+
+        t0, op0 = operands[1]
+        t1, op1 = operands[0]
+
+        if t0 != STACK_TOP and t1 != STACK_TOP and self.top_reg:
+            instr += self.gen_single_push(ACCUM)
+            self.top_reg = False
+
+
+        if t0 == NUMBER and t1 == NUMBER:
+            instr += self.smart_set(ACCUM, int(op0 | op1))
+            self.top_reg = True
+            return instr
+
+        instr += self.fetch_two_operands(operands)
+
+        instr += [ ( LNOT, (OP0, OP0 ))]
+        instr += [ ( LNOT, (OP1, OP1 ))]
+        instr += [ ( LANDR, (OP0, OP0, OP1 ))]
+        instr += [ ( LNOT, (OP0, OP0 ))]
+
+        self.top_reg = False
+        return instr
+
+
+    def gen_b_not(self, operands):
+        """
+        a
+
+        return ~a
+        """
+        t, op = operands[0]
+        instr = []
+
+        if t != STACK_TOP and self.top_reg:
+            instr += self.gen_single_push(ACCUM)
+            self.top_reg = False
+
+        if t == NUMBER:
+            instr += [ ( LADDI, (OP0, ZERO, int(~op) ))]
+            self.top_reg = True
+            return instr
+
+        instr += self.fetch_one_operand(operands[0])
+
+        instr += [ (LNOT, (OP0, OP0 ))]
+
+        self.top_reg = True
+        return instr
 
     def gen_halt(self):
         return [ (LHALT, None) ]
