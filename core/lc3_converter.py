@@ -72,6 +72,8 @@ class LC3Converter():
             return self.gen_minus(operands)
         elif operation == MULTI:
             return self.gen_mult(operands)
+        elif operation == DIVIS:
+            return self.gen_divi(operands)
         elif operation == LTHAN:
             return self.gen_lthan(operands)
         elif operation == GTHAN:
@@ -300,21 +302,19 @@ class LC3Converter():
 
         a, b
 
-        a_isneg, b_isneg
+        Using b as the counter,
 
-        if a < 0 and b < 0:
-            a = -a
+        if b <0:
             b = -b
-            op0 = a
-            op1 = b
+            a = -a
 
+        res = 0
 
-        elif a < 0:
-            op0 = a
-            op1 = b
-        elif b < 0:
-            op0 = b
-            op1 = a
+        while b:
+            res += a
+            b--
+
+        return res
 
         """
 
@@ -371,9 +371,128 @@ class LC3Converter():
         self.top_reg = True
         return instr
 
+    def gen_unary_minus(self, operands):
+        """
+        a
+        
+        return -a
+        """
+
+        t, op = operands[0]
+        instr = []
+
+        if t != STACK_TOP and self.top_reg:
+            instr += self.gen_single_push(ACCUM)
+            self.top_reg = False
+
+        if t == NUMBER:
+            instr += self.smart_set(ACCUM, -op)
+            self.top_reg = True
+            return instr
+
+        instr += self.fetch_one_operand(operands[0])
+        instr += [ ( LNOT, (OP0, OP0) )]
+        instr += [ ( LADDI, ( OP0, OP0, 1) ) ]
+
+        self.top_reg = True
+        return instr
+
 
     def gen_divi(self, operands):
-        return None
+        """
+        a, b
+
+        
+
+        """
+
+        instr = []
+
+        t0, op0 = operands[1]
+        t1, op1 = operands[0]
+
+        if t0 != STACK_TOP and t1 != STACK_TOP and self.top_reg:
+            instr += self.gen_single_push(ACCUM)
+            self.top_reg = False
+
+
+        if t0 == NUMBER and t1 == NUMBER:
+            instr += self.smart_set(ACCUM, int(op0 // op1))
+            self.top_reg = True
+            return instr
+
+
+        instr += self.fetch_two_operands(operands)
+
+        # First ensure the second operand isn't zero
+        instr += [ ( LADDI, (OP1, OP1, 0 ))]
+        instr += [ ( LBR, ('z', 33) )] # if check fails jump to end
+
+        # Now check whether both are positive
+        instr += [ ( LBR, ('n', 3))] # if b is negative, attempt to FLIP a
+        
+        instr += [ ( LADDI, (OP0, OP0, 0) )]
+        instr += [ ( LBR, ('n', 17))] # go to neg_loop, since b > 0 and a < 0
+
+        # a > 0 and b > 0
+        instr += [ (LBR, ('nzp', 6))] # jump to main division loop
+
+        # FLIP: (executed when b < 0)
+        instr += [ ( LADDI, (OP0, OP0, 0) )]
+        instr += [ ( LBR, ('zp', 14))] # if a >= 0, then execute neg_loop
+
+        # since b < 0 and a < 0, flip both of them
+        instr += [ ( LNOT, (OP0, OP0))]
+        instr += [ ( LADDI, (OP0, OP0, 1) )]
+        instr += [ ( LNOT, (OP1, OP1))]
+        instr += [ ( LADDI, (OP1, OP1, 1) )]
+
+        # MAIN DIVISION LOOP (not neg_loop):
+        # a >= 0 and b > 0
+        instr += [ ( LADDI, (TEMP, ZERO, 0 ))] # TEMP = result
+        
+        instr += [ ( LNOT, (OP1, OP1))]
+        instr += [ ( LADDI, (OP1, OP1, 1))] # b = -b
+
+        instr += [ ( LADDI, (OP0, OP0, 0) )] # while a >= 0:
+        instr += [ ( LBR, ( 'n', 3 ))]
+
+        instr += [ ( LADDR, (OP0, OP0, OP1 ))] # a = a + (-b)
+        instr += [ ( LADDI, (TEMP, TEMP, 1 ))] # res++
+
+        instr += [ ( LBR, ( 'nzp', -5 ))]
+
+        # res will be one more than what it should be
+        instr += [ ( LADDI, (ACCUM, TEMP, -1)) ]
+        instr += [ ( LBR, ( 'nzp', 13 ))]
+
+
+        # neg_loop (executed when a < 0 XOR b < 0):
+        # make b the negative one
+        instr += [ ( LADDI, (OP1, OP1, 0 ) )]
+        instr += [ ( LBR, ( 'n', 4) )] # if b < 0, jump to neg_div_loop
+        instr += [ ( LNOT, (OP0, OP0))]
+        instr += [ ( LADDI, (OP0, OP0, 1) )]
+        instr += [ ( LNOT, (OP1, OP1))]
+        instr += [ ( LADDI, (OP1, OP1, 1) )]
+
+        # neg_div_loop (here a > 0, b < 0):
+        instr += [ ( LADDI, (OP0, OP0, 0) )]
+        instr += [ ( LBR, ( 'n', 3 ))]
+
+        instr += [ ( LADDR, (OP0, OP0, OP1 ))] # a = a + (-b)
+        instr += [ ( LADDI, (TEMP, TEMP, 1 ))] # res++
+
+        instr += [ ( LBR, ( 'nzp', -5 ))]
+
+        # res will be one more than it should be, and opposite sign
+        instr += [ ( NOT, (TEMP, TEMP) )]
+        instr += [ ( LADDI, (ACCUM, TEMP, 2)) ]
+        
+        # END
+
+        self.top_reg = True
+        return instr
 
     def gen_modulo(self, operands):
         return None

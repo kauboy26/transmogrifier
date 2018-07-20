@@ -84,3 +84,14 @@ main:
 end
 
 '''
+
+lsamp6 = '''
+
+main:
+    c = 0;
+    a = 49;
+    b = 0;
+    c = a / b;
+end
+
+'''
