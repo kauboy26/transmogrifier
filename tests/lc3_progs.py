@@ -103,9 +103,102 @@ end
 lsamp7 = '''
 
 main:
-    a = 8;
-    b = 3;
+    a = 10;
+    b = 7;
     g = a % b;
+
+    if (a + b) * (a - b) % (a + b - 4) == 13 - 1:
+        g = -666;
+    end
 end
 
+'''
+
+lsamp8 = '''
+
+# declare fib(n);
+declare fib2(n);
+
+main:
+    a = fib2(10);
+end
+
+
+# def fib(n):
+#     if n < 2:
+#         return 1;
+#     end
+
+#     return fib(n - 1) + fib(n - 2);
+# end
+
+def fib2(n):
+    if n < 2:
+        return 1;
+    end
+
+    a0 = 1;
+    a1 = 1;
+    ans = 0;
+
+    n = n - 1;
+
+    while n:
+        ans = a0 + a1;
+        a0 = a1;
+        a1 = ans;
+        n = n - 1;
+    end
+
+    return ans;
+end
+'''
+
+lsamp9 = '''
+
+declare f(a, b, c, d, e);
+
+main:
+    a = 1;
+    b = 2;
+    c = 3;
+    d = 4;
+    e = 5;
+
+    g = f(a, b, c, d, e);
+    h = f(a, a + a, a + b, d, b + c);
+    i = f(1, 2, a + a + a, a + a + a + a, 5 - 1 + 1);
+end
+
+def f(a, b, c, d, e):
+    return 1 * a + 2 * b + 3 * c + 4 * d + 5 * e;
+end
+'''
+
+lsamp10 = '''
+
+declare is_prime(n);
+
+main:
+    a = is_prime(100 + 99 - 100);
+end
+
+def is_prime(num):
+
+    prime = 1;
+
+    i = 2;
+
+    while i * i < num:
+
+        if num % i == 0:
+            prime = 0;
+            i = num; # to exit the loop
+        end
+
+        i = i + 1;
+    end
+
+    return prime;
+end
 '''

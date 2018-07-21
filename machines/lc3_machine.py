@@ -125,6 +125,12 @@ class LC3Machine():
             self.jmp(operands)
         elif instruction == LHALT:
             self.halt()
+        elif instruction == LJSR:
+            self.jsr(operands)
+        elif instruction == LJSRR:
+            self.jsrr(operands)
+        elif instruction == LRET:
+            self.ret(operands)
 
 
     def addi(self, operands):
@@ -235,7 +241,7 @@ class LC3Machine():
     def jsrr(self, operands):
         base = operands
         self.registers[LINK] = self.pc
-        self.pc = base
+        self.pc = self.registers[base]
 
 
     def jmp(self, operands):
@@ -243,7 +249,7 @@ class LC3Machine():
         self.pc = self.registers[base]
 
 
-    def ret(self, operands):
+    def ret(self, operands=None):
         self.pc = self.registers[LINK]
 
 

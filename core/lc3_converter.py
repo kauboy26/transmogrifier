@@ -19,7 +19,7 @@ class LC3Converter():
 
         self.top_reg = False
         self.lc3_instructions = []
-        self.stack_frame = [{}]
+        self.stack_frame = {}
 
         self.instructions = instructions
         self.labels = labels
@@ -104,6 +104,18 @@ class LC3Converter():
             return self.gen_condbranch(operands)
         elif operation == BRANCH:
             return self.gen_uncond_branch(operands)
+        elif operation == SETUP_FUNC:
+            return self.gen_setup_func(operands)
+        elif operation == PUSH:
+            return self.gen_push_params(operands)
+        elif operation == JROUTINE:
+            return self.gen_jroutine(operands)
+        elif operation == RETURN:
+            return self.gen_return_value(operands)
+        elif operation == R_TOCALLER:
+            return self.gen_return_to_caller()
+        elif operation == FETCH_RV:
+            return self.gen_fetch_rv(operands)
 
 
     def gen_setup_main(self, operands):
@@ -129,16 +141,213 @@ class LC3Converter():
         # Remember stack points downwards!
         i = 0
         for var in self.func_help[MAIN_FUNC]:
-            self.stack_frame[-1][var] = i
+            self.stack_frame[var] = i
             i -= 1
         
         instr = instr + self.smart_add(SP, SP, i)
 
         return instr
 
+
     def gen_clean_main(self, operands):
         instr = [ ( LADDI, (SP, FP, 1 )) ]
         return instr
+
+    def gen_setup_func(self, operands):
+        """
+        Sets up a function:
+            - Makes space for return val, return address and old FP,
+            and stores them.
+            - Resets the FP.
+            - (For compiling) saves the location of variables.
+        
+        When this is called, the top_reg must be free to use.
+        """
+        assert(not self.top_reg)
+
+        func_name, params = operands
+
+        instr = []
+
+        # Make room
+        instr += [ ( LADDI, (SP, SP, -3 ))]
+
+        # Store RA and old FP
+        instr += [ ( LSTR, (FP, SP, 0 ) )]
+        instr += [ ( LSTR, (LINK, SP, 1 ) )]
+
+        # reset FP
+        instr += [ ( LADDI, (FP, SP, -1) )]
+
+
+        # Make room for local variables
+        loc_vars = self.func_help[func_name]
+        if len(loc_vars):
+            instr += self.smart_add(SP, SP, len(loc_vars))
+
+        # to help with compiling:
+        new_frame = {}
+        np = len(params)
+        for i, param in enumerate(params):
+            new_frame[param] = 4 + np - 1 - i
+
+        for i, var in enumerate(loc_vars):
+            new_frame[var] = -i
+
+        self.stack_frame = new_frame
+
+        return instr
+
+
+    def gen_push_params(self, params):
+        """
+        Pushes the params a function requires on to the stack.
+        If top_reg is currently occupied, it pushes that on to the
+        stack first, and then performs the actual param-push.
+
+        When this is called, R1 and R2 must be free to use. R0 will
+        is automatically pushed and freed anyway.
+
+        This will be optimized later, for now I just want it to work.
+        """
+
+        instr = []
+
+        # First, if top_reg, the put on to the stack.
+        if self.top_reg:
+            self.top_reg = False
+            instr += [ ( LADDI, (SP, SP, -1 )) ]
+            instr += [ ( LSTR, (ACCUM, SP, 0))]
+
+
+        np = len(params) # number of params
+        ns = 0 # number params coming from stack
+        for t, op in params:
+            if t == STACK_TOP:
+                ns += 1
+
+        # make room for the params not coming from stack
+        diff = np - ns
+        instr += self.smart_add(SP, SP, - diff)
+
+        # Now to push:
+        si = 0
+        i = 0
+        for t, op in params:
+            if t == ID:
+                instr += self.read_var(OP0, op)
+            elif t == NUMBER:
+                instr += self.smart_set(OP0, op)
+            elif t == STACK_TOP:
+                if diff + si == i:
+                    i += 1
+                    si += 1
+                    continue
+
+                instr += self.read_stack(OP0, diff + si)
+                si += 1
+
+            instr += self.write_stack(OP0, i)
+            i += 1
+
+
+        return instr
+
+
+    def gen_jroutine(self, func_name):
+        """
+        Figures out the location of the function through
+        the jump-table, and calls JSRR.
+
+        Since typically, a PUSH_PARAMS is called before this,
+        all registers are free to use. Therefore, this method assumes
+        that all registers are free to use.
+        """
+
+        assert(not self.top_reg)
+
+        instr = []
+
+        instr += self.read_table(ACCUM, func_name)
+        instr += [ (LJSRR, ( ACCUM ) )]
+
+        return instr
+
+    def gen_fetch_rv(self, params):
+        """
+        Puts the return value into R0, and cleans up the space
+        occupied when params were pushed. SP must be pointing at
+        the return value when this is called.
+
+        R0 is NOT guaranteed to be loaded last.
+
+        R0 must be ready to use when this is called.
+
+        """
+
+        assert(not self.top_reg)
+
+        instr = []
+
+        instr += [ (LLDR, (ACCUM, SP, 0 ))]
+        instr += self.smart_add(SP, SP, len(params) + 1)
+
+        self.top_reg = True
+        return instr
+
+
+    def gen_return_to_caller(self, operands=None):
+        """
+        Cleans up the stack and goes back.
+        """
+        assert(not self.top_reg)
+        return self.gen_tear_down()
+
+    def gen_return_value(self, operand):
+        """
+        Puts the operand's value in to the RV slot,
+        and then tears and returns to the caller.
+
+        At the end, self.top_reg must be False.
+        """
+
+        instr = []
+        instr += self.fetch_one_operand(operand[0])
+
+        assert(not self.top_reg)
+
+        # store RV in correct place
+        instr += [ ( LSTR, ( ACCUM, FP, 3))]
+
+        instr += self.gen_tear_down()
+
+        return instr
+
+    def gen_tear_down(self, operands=None):
+        """
+        Tears down the stack (on the callee side).
+        Restores the old FP, RA, and makes SP point
+        at the return value.
+
+        Returns to the caller using LINK (through RET)
+        """
+        assert(not self.top_reg)
+
+        instr = []
+
+        instr += [ ( LADDI, (SP, FP , 1 ))]
+        # Restore RA and old FP
+        instr += [ ( LLDR, (FP, SP, 0 ))]
+        instr += [ ( LLDR, (LINK, SP, 1 )) ]
+        
+        # Make SP point to return value
+        instr += [ ( LADDI, (SP, SP, 2 ))]
+
+        instr += [ ( LRET, None )]
+
+        return instr
+        
+
 
     def gen_assign(self, operands):
         """
@@ -161,18 +370,19 @@ class LC3Converter():
             loc_reg = OP1
 
             # Find the location of the variable, and load into OP1
-            instr += self.smart_add(loc_reg, FP, self.stack_frame[-1][var])
+            instr += self.smart_add(loc_reg, FP, self.stack_frame[var])
 
             # Store the value into location of variable
             instr += [( LSTR, ( val_reg, loc_reg, 0 )) ]
 
             return instr
 
+        assert(not self.top_reg)
         # Otherwise figure out the location of the variable
         loc_reg = OP0
         val_reg = OP1
 
-        instr += self.smart_add(loc_reg, FP, self.stack_frame[-1][var])
+        instr += self.smart_add(loc_reg, FP, self.stack_frame[var])
 
         if t1 == ID:
             instr += self.read_var(val_reg, op1)
@@ -186,6 +396,106 @@ class LC3Converter():
 
         return instr
 
+    def gen_halt(self):
+        return [ (LHALT, None) ]
+
+    def gen_pop(self, num):
+        """
+        If there is already a value in R0 (head of stack), then
+        simply mark R0 as empty.
+
+        After that, pop "n - 1" items from the real, physical stack.
+
+        This method is not be used in cases when top_reg is being 
+        turned off manually.
+        """
+        if self.top_reg:
+            self.top_reg = False
+            num -= 1
+
+        if num == 0:
+            return []
+
+        return self.smart_add(SP, SP, num)
+
+    def gen_physical_pop(self, num):
+        """
+        Simply reclaims "num" space from the physical stack.
+        
+        DOES NOT INCLUDE R0!
+        DOES NOT LOOK AT TOP_REG!
+        """
+
+        if num == 0:
+            return []
+
+        return self.smart_add(SP, SP, num)
+
+
+    def gen_loadcc(self, operand):
+        """
+        If '$', don't do anything. It is guaranteed to have been
+        the last thing put into a register.
+
+        Of course, it will load CC so the order is maintained
+        (unlike fetch_one_operand)
+        """
+        t, op = operand
+
+        if t == STACK_TOP:
+            assert(self.top_reg)
+            self.top_reg = False
+            return [ ( LADDI, ( OP0, OP0, 0) ) ]
+        elif t == ID:
+            return self.read_var(ACCUM, op)
+        elif t == NUMBER:
+            return self.smart_set(ACCUM, op)
+
+    def gen_single_push(self, register):
+        """
+        Pushes the value in the register on to the stack (updates
+        stack pointer as well)
+
+        Does not care about top_reg, matters there are assumed to have
+        been taken care of already.
+        """
+        instr =  [ ( LADDI, ( SP, SP, -1 )) ]
+        instr += [ ( LSTR, ( register, SP, 0 ))]
+        return instr
+
+
+    def gen_condbranch(self, operands):
+        """
+        The condition code is assumed to have been set in
+        a prior LOAD_CC.
+        If the CC value is NOT 0, then the branch is not taken.
+
+        if CC != 0 do {body} else branch
+
+        """
+        lbl = operands
+
+        rt_inst = self.read_table(ACCUM, lbl)
+
+        instr = [ ( LBR, ( 'np', len(rt_inst) + 1) ) ]
+        instr += rt_inst
+        instr += [ ( LJMP, (ACCUM) )]
+
+        return instr
+
+    def gen_uncond_branch(self, operands):
+        """
+        Branches to the point specified by the label.
+        """
+        lbl = operands
+
+        instr = self.read_table(ACCUM, lbl)
+        instr += [ ( LJMP, (ACCUM) )]
+
+        return instr
+
+
+    # Below are all the arithmetic, logic, relational and bitwise operations
     def gen_plus(self, operands):
         """
         Generates instructions to add two numbers
@@ -584,11 +894,11 @@ class LC3Converter():
         instr += [ ( LADDI, (OP1, OP1, 1))] # OP1 = -b
 
         instr += [ ( LADDI, (OP0, OP0, 0) )] # while a >= 0:
-        instr += [ ( LBR, ( 'n', 3 ))]
+        instr += [ ( LBR, ( 'n', 2 ))]
 
         instr += [ ( LADDR, (OP0, OP0, OP1 ))] # a = a + (-b)
 
-        instr += [ ( LBR, ( 'nzp', -4 ))]
+        instr += [ ( LBR, ( 'zp', -2 ))]
 
         instr += [ ( LNOT, (OP1, OP1) )]
         instr += [ ( LADDI, (OP1, OP1, 1) )]
@@ -608,11 +918,11 @@ class LC3Converter():
 
         # neg_div_loop (here a > 0, b < 0):
         instr += [ ( LADDI, (OP0, OP0, 0) )]
-        instr += [ ( LBR, ( 'n', 3 ))]
+        instr += [ ( LBR, ( 'n', 2 ))]       # TODO optimize
 
         instr += [ ( LADDR, (OP0, OP0, OP1 ))] # a = a + (-b)
 
-        instr += [ ( LBR, ( 'nzp', -4 ))]
+        instr += [ ( LBR, ( 'zp', -2 ))]
 
         instr += [ ( NOT, (OP0, OP0) )]
         instr += [ ( LADDI, (ACCUM, OP0, 1)) ]
@@ -817,101 +1127,6 @@ class LC3Converter():
         self.top_reg = True
         return instr
 
-    def gen_halt(self):
-        return [ (LHALT, None) ]
-
-    def gen_pop(self, num):
-        """
-        If there is already a value in R0 (head of stack), then
-        simply mark R0 as empty.
-
-        After that, pop "n - 1" items from the real, physical stack.
-
-        This method is not be used in cases when top_reg is being 
-        turned off manually.
-        """
-        if self.top_reg:
-            self.top_reg = False
-            num -= 1
-
-        if num == 0:
-            return []
-
-        return self.smart_add(SP, SP, num)
-
-    def gen_physical_pop(self, num):
-        """
-        Simply reclaims "num" space from the physical stack.
-        
-        DOES NOT INCLUDE R0!
-        DOES NOT LOOK AT TOP_REG!
-        """
-
-        if num == 0:
-            return []
-
-        return self.smart_add(SP, SP, num)
-
-
-    def gen_loadcc(self, operand):
-        """
-        If '$', don't do anything. It is guaranteed to have been
-        the last thing put into a register.
-
-        Of course, it will load CC so the order is maintained
-        (unlike fetch_one_operand)
-        """
-        t, op = operand
-
-        if t == STACK_TOP:
-            assert(self.top_reg)
-            self.top_reg = False
-            return [ ( LADDI, ( OP0, OP0, 0) ) ]
-        elif t == ID:
-            return self.read_var(ACCUM, op)
-        elif t == NUMBER:
-            return self.smart_set(ACCUM, op)
-
-    def gen_single_push(self, register):
-        """
-        Pushes the value in the register on to the stack (updates
-        stack pointer as well)
-        """
-        instr =  [ ( LADDI, ( SP, SP, -1 )) ]
-        instr += [ ( LSTR, ( register, SP, 0 ))]
-        return instr
-
-
-    def gen_condbranch(self, operands):
-        """
-        The condition code is assumed to have been set in
-        a prior LOAD_CC.
-        If the CC value is NOT 0, then the branch is not taken.
-
-        if CC != 0 do {body} else branch
-
-        """
-        lbl = operands
-
-        rt_inst = self.read_table(ACCUM, lbl)
-
-        instr = [ ( LBR, ( 'np', len(rt_inst) + 1) ) ]
-        instr += rt_inst
-        instr += [ ( LJMP, (ACCUM) )]
-
-        return instr
-
-    def gen_uncond_branch(self, operands):
-        """
-        Branches to the point specified by the label.
-        """
-        lbl = operands
-
-        instr = self.read_table(ACCUM, lbl)
-        instr += [ ( LJMP, (ACCUM) )]
-
-        return instr
-
 
     def smart_add(self, dest_reg, src_reg, number):
         """
@@ -971,7 +1186,8 @@ class LC3Converter():
     def fetch_one_operand(self, operand):
         """
         Puts the operand into R0. In case of a '$', does nothing, since
-        the top of the stack MUST be in R0.
+        the top of the stack MUST be in R0. Additionally, top_reg is set
+        to False.
 
         DOES not guarantee anything about load order. CCs must be reset
         for safety. This is important in cases where the stack is
@@ -1058,7 +1274,7 @@ class LC3Converter():
         Reads a variable into the specified register.
         """
 
-        dist_to_var = self.stack_frame[-1][var]
+        dist_to_var = self.stack_frame[var]
 
         instr = self.smart_add(target_reg, FP, dist_to_var)
         instr += [ ( LLDR, ( target_reg, target_reg, 0) )]
@@ -1069,9 +1285,60 @@ class LC3Converter():
         """
         Puts the value at that label into the target register
         """
+
         dist_to_entry = self.table[self.resolve_lbl(lbl)]
+
+        if -32 <= dist_to_entry <= 31:
+            instr = [ ( LLDR, ( target_reg, TABLE, dist_to_entry )) ]
+            return instr
+
         instr = self.smart_add(target_reg, TABLE, dist_to_entry)
         instr += [ ( LLDR, ( target_reg, target_reg, 0) )]
+        return instr
+
+    def read_stack(self, target_reg, offset):
+        """
+        Reads the value at location (SP + offset) into
+        the target register.
+
+        This method does not provide any guarantees regarding
+        read order, and does not ensure that TEMP is safe.
+
+        Matters regarding top_reg are assumed to have been taken
+        care of already.
+        """
+
+        instr = []
+        
+        if -32 <= offset <= 31:
+            instr += [ (LLDR, (target_reg, SP, offset))]
+            return instr
+
+        instr += self.smart_add(target_reg, target_reg, offset)
+        instr += [ ( LLDR, (target_reg, target_reg, 0 )) ]
+
+        return instr
+
+    def write_stack(self, target_reg, offset):
+        """
+        Writes the value in the target register to 
+        the location location (SP + offset)
+
+        This method does not ensure that TEMP is safe.
+
+        Matters regarding top_reg are assumed to have been taken
+        care of already.
+        """
+
+        instr = []
+        
+        if -32 <= offset <= 31:
+            instr += [ (LSTR, (target_reg, SP, offset))]
+            return instr
+
+        instr += self.smart_add(target_reg, target_reg, offset)
+        instr += [ ( LSTR, (target_reg, target_reg, 0 )) ]
+
         return instr
 
     def resolve_lbl(self, lbl):

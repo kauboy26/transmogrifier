@@ -490,6 +490,7 @@ def parse(token_list=[]):
     # to be broadcast elsewhere.
     check(not curr_scope_type, 'Mismatched "end" (missing at end of file?)', line_number)
     check(not op_stack and not num_stack, 'Missing semicolon?', line_number)
+    check_all_funcs_defined(functions, defined_funcs)
 
     return ir_form, labels, ln_to_label, func_help
 
@@ -510,6 +511,16 @@ def check_operands_exist(operands, variables, line_number):
     for c, v in operands:
         check(c != ID or v in variables, 'The variable "{}" has not been'
             ' defined'.format(v), line_number)
+
+def check_all_funcs_defined(functions, defined_funcs):
+    """
+    Makes sure all the declared functions were defined.
+    """
+    for func in functions:
+        check(func in defined_funcs,
+            'Function "{}" was declared but not defined!.'
+            ' Disregard the line number.'.format(func),
+            -1)
 
 def process_declare(token_list, i, functions, macros, line_number):
     """
