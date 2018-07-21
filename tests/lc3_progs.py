@@ -90,9 +90,22 @@ lsamp6 = '''
 main:
     c = 0;
     a = 49;
-    b = 12;
+    b = -7;
     c = a / b;
-    c = a / -b;
+    d = a / -b;
+    e = (a + b) / (a - b);
+    f = (a + b) * (a - b);
+    # g = a % b;
+end
+
+'''
+
+lsamp7 = '''
+
+main:
+    a = 8;
+    b = 3;
+    g = a % b;
 end
 
 '''

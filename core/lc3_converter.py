@@ -74,6 +74,8 @@ class LC3Converter():
             return self.gen_mult(operands)
         elif operation == DIVIS:
             return self.gen_divi(operands)
+        elif operation == MODULO:
+            return self.gen_modulo(operands)
         elif operation == LTHAN:
             return self.gen_lthan(operands)
         elif operation == GTHAN:
@@ -363,7 +365,7 @@ class LC3Converter():
         instr += [ ( LADDR, (TEMP, TEMP, OP0 ))]
 
         instr += [ ( LADDI, (OP1, OP1, -1))]
-        instr += [ ( LBR, ('nzp', -5 ))]
+        instr += [ ( LBR, ('p', -3 ))]
 
         # put the result into accumulator
         instr += [ (LADDI, (ACCUM, TEMP, 0)) ]
@@ -481,10 +483,10 @@ class LC3Converter():
         instr += [ ( LADDI, (OP0, OP0, 0) )] # while a >= 0:
         instr += [ ( LBR, ( 'n', 3 ))]
 
-        instr += [ ( LADDR, (OP0, OP0, OP1 ))] # a = a + (-b)
         instr += [ ( LADDI, (TEMP, TEMP, 1 ))] # res++
-
-        instr += [ ( LBR, ( 'nzp', -5 ))]
+        instr += [ ( LADDR, (OP0, OP0, OP1 ))] # a = a + (-b)
+        
+        instr += [ ( LBR, ( 'zp', -3 ))]
 
         # res will be one more than what it should be
         instr += [ ( LADDI, (ACCUM, TEMP, -1)) ]
@@ -506,19 +508,21 @@ class LC3Converter():
         instr += [ ( LADDI, (OP0, OP0, 0) )]
         instr += [ ( LBR, ( 'n', 3 ))]
 
-        instr += [ ( LADDR, (OP0, OP0, OP1 ))] # a = a + (-b)
         instr += [ ( LADDI, (TEMP, TEMP, 1 ))] # res++
+        instr += [ ( LADDR, (OP0, OP0, OP1 ))] # a = a + (-b)
+        
 
-        instr += [ ( LBR, ( 'nzp', -5 ))]
+        instr += [ ( LBR, ( 'zp', -3 ))]
 
         # res will be one more than it should be, and opposite sign
         instr += [ ( NOT, (TEMP, TEMP) )]
-        instr += [ ( LADDI, (ACCUM, TEMP, 1)) ]
+        instr += [ ( LADDI, (ACCUM, TEMP, 2)) ]
         
         # END
 
         self.top_reg = True
         return instr
+
 
     def gen_modulo(self, operands):
         """
@@ -543,16 +547,16 @@ class LC3Converter():
 
 
         if t0 == NUMBER and t1 == NUMBER:
-            instr += self.smart_set(ACCUM, int(op0 // op1))
+            instr += self.smart_set(ACCUM, int(op0 % op1)) # TODO wrong behaviour here!
             self.top_reg = True
             return instr
 
 
-        instr += self.fetch_two_operands(operands)
+        instr += self.fetch_two_operands(operands, commutative = False)
 
         # First ensure the second operand isn't zero
         instr += [ ( LADDI, (OP1, OP1, 0 ))]
-        instr += [ ( LBR, ('z', 33) )] # if check fails jump to end
+        instr += [ ( LBR, ('z', 32) )] # if check fails jump to end
 
         # Now check whether both are positive
         instr += [ ( LBR, ('n', 3))] # if b is negative, attempt to FLIP a
@@ -577,20 +581,20 @@ class LC3Converter():
         # a >= 0 and b > 0
         
         instr += [ ( LNOT, (OP1, OP1))]
-        instr += [ ( LADDI, (OP1, OP1, 1))] # b = -b
+        instr += [ ( LADDI, (OP1, OP1, 1))] # OP1 = -b
 
         instr += [ ( LADDI, (OP0, OP0, 0) )] # while a >= 0:
         instr += [ ( LBR, ( 'n', 3 ))]
 
         instr += [ ( LADDR, (OP0, OP0, OP1 ))] # a = a + (-b)
 
-        instr += [ ( LBR, ( 'nzp', -5 ))]
+        instr += [ ( LBR, ( 'nzp', -4 ))]
 
         instr += [ ( LNOT, (OP1, OP1) )]
         instr += [ ( LADDI, (OP1, OP1, 1) )]
-        instr += [ ( LADDR, (ACCUM, OP0, OP1)) ]
+        instr += [ ( LADDR, (ACCUM, OP0, OP1)) ] # a = a + b (so a = n * -b + b)
 
-        instr += [ ( LBR, ( 'nzp', 13 ))]
+        instr += [ ( LBR, ( 'nzp', 12 ))]
 
 
         # neg_loop (executed when a < 0 XOR b < 0):
@@ -608,9 +612,8 @@ class LC3Converter():
 
         instr += [ ( LADDR, (OP0, OP0, OP1 ))] # a = a + (-b)
 
-        instr += [ ( LBR, ( 'nzp', -5 ))]
+        instr += [ ( LBR, ( 'nzp', -4 ))]
 
-        # res will be one more than it should be, and opposite sign
         instr += [ ( NOT, (OP0, OP0) )]
         instr += [ ( LADDI, (ACCUM, OP0, 1)) ]
         
