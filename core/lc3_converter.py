@@ -116,6 +116,10 @@ class LC3Converter():
             return self.gen_return_to_caller()
         elif operation == FETCH_RV:
             return self.gen_fetch_rv(operands)
+        elif operation == MEM:
+            return self.gen_mem(operands)
+        elif operation == MEM_ASSIGN:
+            return self.gen_mem_assign(operands)
 
 
     def gen_setup_main(self, operands):
@@ -238,6 +242,8 @@ class LC3Converter():
                 instr += self.read_var(OP0, op)
             elif t == NUMBER:
                 instr += self.smart_set(OP0, op)
+            elif t == ADDRESS:
+                instr += self.smart_add(ACCUM, FP, self.stack_frame[op])
             elif t == STACK_TOP:
                 if diff + si == i:
                     i += 1
@@ -351,6 +357,10 @@ class LC3Converter():
 
     def gen_assign(self, operands):
         """
+        a, b
+
+        a = b
+
         Assigns the value to the variable. The variable is assumed to exist.
         Will eat things from the stack when necessary. This is meant
         for variables. Writes to memory locations are handled by mem_assign.
@@ -361,40 +371,75 @@ class LC3Converter():
         t1, op1 = operands[0]
         t0, var = operands[1]
 
-        if t1 == STACK_TOP:
-            # Eat from stack
-            self.top_reg = False
-
-            # The value is already in R0
-            val_reg = OP0
-            loc_reg = OP1
-
-            # Find the location of the variable, and load into OP1
-            instr += self.smart_add(loc_reg, FP, self.stack_frame[var])
-
-            # Store the value into location of variable
-            instr += [( LSTR, ( val_reg, loc_reg, 0 )) ]
-
-            return instr
-
+        # R0 = b
+        instr += self.fetch_one_operand(operands[0])
         assert(not self.top_reg)
-        # Otherwise figure out the location of the variable
-        loc_reg = OP0
-        val_reg = OP1
 
-        instr += self.smart_add(loc_reg, FP, self.stack_frame[var])
-
-        if t1 == ID:
-            instr += self.read_var(val_reg, op1)
-        elif t1 == NUMBER:
-            instr += self.smart_set(val_reg, op1)
-
-        
+        instr += self.smart_add(OP1, FP, self.stack_frame[var])
 
         # Now actually store the value
-        instr += [( LSTR, ( val_reg, loc_reg, 0 )) ]
+        instr += [( LSTR, ( OP0, OP1, 0 )) ]
 
+        self.top_reg = False
         return instr
+
+
+    def gen_mem_assign(self, operands):
+        """
+        a, b
+
+        mem[a] = b
+        """
+        instr = []
+
+        t0, op0 = operands[1]
+        t1, op1 = operands[0]
+
+        if t0 != STACK_TOP and t1 != STACK_TOP:
+            assert(not self.top_reg)
+
+        instr += self.fetch_two_operands(operands, commutative=False)
+        assert(not self.top_reg)
+
+        # Now a is in OP0, b is in OP1
+        instr += [ ( LSTR, (OP1, OP0, 0 )) ]
+
+        self.top_reg = False
+        return instr
+
+
+    def gen_mem(self, operand):
+        """
+        a
+
+        return mem[a]
+
+
+        Reads the value specified by operand and puts it
+        into R0. Goes to the location specified by the value
+        now in R0, and puts the value there into R0.
+
+        Sets top_reg.
+        """
+
+        instr = []
+
+        t, op = operand
+        instr = []
+
+        if t != STACK_TOP and self.top_reg:
+            instr += self.gen_single_push(ACCUM)
+            self.top_reg = False
+
+
+        instr += self.fetch_one_operand(operand)
+        assert(not self.top_reg)
+
+        instr += [ ( LLDR, (OP0, OP0, 0 ))]
+
+        self.top_reg = True
+        return instr
+
 
     def gen_halt(self):
         return [ (LHALT, None) ]
@@ -450,6 +495,8 @@ class LC3Converter():
             return self.read_var(ACCUM, op)
         elif t == NUMBER:
             return self.smart_set(ACCUM, op)
+        elif t == ADDRESS:
+            return self.smart_add(ACCUM, FP, self.stack_frame[op])
 
     def gen_single_push(self, register):
         """
@@ -1205,6 +1252,8 @@ class LC3Converter():
             return self.read_var(ACCUM, op)
         elif t == NUMBER:
             return self.smart_set(ACCUM, op)
+        elif t == ADDRESS:
+            return self.smart_add(ACCUM, FP, self.stack_frame[op])
 
 
     def fetch_two_operands(self, operands, commutative=True):
@@ -1247,12 +1296,16 @@ class LC3Converter():
                     instr += self.smart_set(OP0, opt)
                 elif tt == ID:
                     instr += self.read_var(OP0, opt)
+                elif tt == ADDRESS:
+                    instr += self.smart_add(OP0, FP, self.stack_frame[opt])
 
             else:
                 if tt == NUMBER:
                     instr += self.smart_set(OP1, opt)
                 elif tt == ID:
                     instr += self.read_var(OP1, opt)
+                elif tt == ADDRESS:
+                    instr += self.smart_add(OP1, FP, self.stack_frame[opt])
 
         else:
 
@@ -1260,11 +1313,17 @@ class LC3Converter():
                 instr += self.read_var(OP0, op0)
             elif t0 == NUMBER:
                 instr += self.smart_set(OP0, op0)
+            elif t0 == ADDRESS:
+                instr += self.smart_add(ACCUM, FP, self.stack_frame[op0])
 
             if t1 == ID:
                 instr += self.read_var(OP1, op1)
             elif t1 == NUMBER:
                 instr += self.smart_set(OP1, op1)
+            elif t1 == ADDRESS:
+                instr += self.smart_add(ACCUM, FP, self.stack_frame[op1])
+
+        self.top_reg = False
 
         return instr
 

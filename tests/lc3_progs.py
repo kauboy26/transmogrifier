@@ -180,7 +180,7 @@ lsamp10 = '''
 declare is_prime(n);
 
 main:
-    a = is_prime(100 + 99 - 100);
+    a = is_prime(100 + 99 - 100 + 100);
 end
 
 def is_prime(num):
@@ -201,4 +201,22 @@ def is_prime(num):
 
     return prime;
 end
+'''
+
+lsamp11 = '''
+
+declare swap(a, b);
+
+main:
+    a = 10;
+    b = 5;
+    swap(addrOf(a), addrOf(b));
+end
+
+def swap(a, b):
+    temp = mem(a);
+    mem(a) = mem(b);
+    mem(b) = temp;
+end
+
 '''
