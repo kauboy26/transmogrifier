@@ -402,7 +402,133 @@ class LC3Converter():
         """
         a, b
 
+        if b == 0:
+            return a
+
+        if b < 0:
+            if a < 0:
+                b = -b
+                a = -a
+            else:
+                goto neg_loop
+        elif a < 0:
+            goto neg_loop
+
+        main_div_loop:
+            res = a / b
+            goto end
+
+        neg_loop:
+            if b > 0:
+                b = -b
+                a = -a
+            res = - (abs(a / b))
+            goto end
+
+        end:
+            return res
+
+        """
+
+        instr = []
+
+        t0, op0 = operands[1]
+        t1, op1 = operands[0]
+
+        if t0 != STACK_TOP and t1 != STACK_TOP and self.top_reg:
+            instr += self.gen_single_push(ACCUM)
+            self.top_reg = False
+
+
+        if t0 == NUMBER and t1 == NUMBER:
+            instr += self.smart_set(ACCUM, int(op0 // op1))
+            self.top_reg = True
+            return instr
+
+
+        instr += self.fetch_two_operands(operands, commutative=False)
+
+        # First ensure the second operand isn't zero
+        instr += [ ( LADDI, (OP1, OP1, 0 ))]
+        instr += [ ( LBR, ('z', 34) )] # if check fails jump to end
+
+        # Now check whether both are positive
+        instr += [ ( LBR, ('n', 3))] # if b is negative, attempt to FLIP a
         
+        instr += [ ( LADDI, (OP0, OP0, 0) )]
+        instr += [ ( LBR, ('n', 17))] # go to neg_loop, since b > 0 and a < 0
+
+        # a > 0 and b > 0
+        instr += [ (LBR, ('nzp', 6))] # jump to main division loop
+
+        # FLIP: (executed when b < 0)
+        instr += [ ( LADDI, (OP0, OP0, 0) )]
+        instr += [ ( LBR, ('zp', 14))] # if a >= 0, then execute neg_loop
+
+        # since b < 0 and a < 0, flip both of them
+        instr += [ ( LNOT, (OP0, OP0))]
+        instr += [ ( LADDI, (OP0, OP0, 1) )]
+        instr += [ ( LNOT, (OP1, OP1))]
+        instr += [ ( LADDI, (OP1, OP1, 1) )]
+
+        # MAIN DIVISION LOOP (not neg_loop):
+        # a >= 0 and b > 0
+        instr += [ ( LADDI, (TEMP, ZERO, 0 ))] # TEMP = result
+        
+        instr += [ ( LNOT, (OP1, OP1))]
+        instr += [ ( LADDI, (OP1, OP1, 1))] # b = -b
+
+        instr += [ ( LADDI, (OP0, OP0, 0) )] # while a >= 0:
+        instr += [ ( LBR, ( 'n', 3 ))]
+
+        instr += [ ( LADDR, (OP0, OP0, OP1 ))] # a = a + (-b)
+        instr += [ ( LADDI, (TEMP, TEMP, 1 ))] # res++
+
+        instr += [ ( LBR, ( 'nzp', -5 ))]
+
+        # res will be one more than what it should be
+        instr += [ ( LADDI, (ACCUM, TEMP, -1)) ]
+        instr += [ ( LBR, ( 'nzp', 14 ))]
+
+
+        # neg_loop (executed when a < 0 XOR b < 0):
+        # make b the negative one
+        instr += [ ( LADDI, (OP1, OP1, 0 ) )]
+        instr += [ ( LBR, ( 'n', 4) )] # if b < 0, jump to neg_div_loop
+        instr += [ ( LNOT, (OP0, OP0))]
+        instr += [ ( LADDI, (OP0, OP0, 1) )]
+        instr += [ ( LNOT, (OP1, OP1))]
+        instr += [ ( LADDI, (OP1, OP1, 1) )]
+
+        instr += [ ( LADDI, (TEMP, ZERO, 0 ))] # TEMP = result
+
+        # neg_div_loop (here a > 0, b < 0):
+        instr += [ ( LADDI, (OP0, OP0, 0) )]
+        instr += [ ( LBR, ( 'n', 3 ))]
+
+        instr += [ ( LADDR, (OP0, OP0, OP1 ))] # a = a + (-b)
+        instr += [ ( LADDI, (TEMP, TEMP, 1 ))] # res++
+
+        instr += [ ( LBR, ( 'nzp', -5 ))]
+
+        # res will be one more than it should be, and opposite sign
+        instr += [ ( NOT, (TEMP, TEMP) )]
+        instr += [ ( LADDI, (ACCUM, TEMP, 1)) ]
+        
+        # END
+
+        self.top_reg = True
+        return instr
+
+    def gen_modulo(self, operands):
+        """
+        a, b
+
+        if b == 0:
+            return a
+
+        in all other cases, this is guaranteed:
+        0 <= res <= abs(b)
 
         """
 
@@ -449,7 +575,6 @@ class LC3Converter():
 
         # MAIN DIVISION LOOP (not neg_loop):
         # a >= 0 and b > 0
-        instr += [ ( LADDI, (TEMP, ZERO, 0 ))] # TEMP = result
         
         instr += [ ( LNOT, (OP1, OP1))]
         instr += [ ( LADDI, (OP1, OP1, 1))] # b = -b
@@ -458,12 +583,13 @@ class LC3Converter():
         instr += [ ( LBR, ( 'n', 3 ))]
 
         instr += [ ( LADDR, (OP0, OP0, OP1 ))] # a = a + (-b)
-        instr += [ ( LADDI, (TEMP, TEMP, 1 ))] # res++
 
         instr += [ ( LBR, ( 'nzp', -5 ))]
 
-        # res will be one more than what it should be
-        instr += [ ( LADDI, (ACCUM, TEMP, -1)) ]
+        instr += [ ( LNOT, (OP1, OP1) )]
+        instr += [ ( LADDI, (OP1, OP1, 1) )]
+        instr += [ ( LADDR, (ACCUM, OP0, OP1)) ]
+
         instr += [ ( LBR, ( 'nzp', 13 ))]
 
 
@@ -481,21 +607,17 @@ class LC3Converter():
         instr += [ ( LBR, ( 'n', 3 ))]
 
         instr += [ ( LADDR, (OP0, OP0, OP1 ))] # a = a + (-b)
-        instr += [ ( LADDI, (TEMP, TEMP, 1 ))] # res++
 
         instr += [ ( LBR, ( 'nzp', -5 ))]
 
         # res will be one more than it should be, and opposite sign
-        instr += [ ( NOT, (TEMP, TEMP) )]
-        instr += [ ( LADDI, (ACCUM, TEMP, 2)) ]
+        instr += [ ( NOT, (OP0, OP0) )]
+        instr += [ ( LADDI, (ACCUM, OP0, 1)) ]
         
         # END
 
         self.top_reg = True
         return instr
-
-    def gen_modulo(self, operands):
-        return None
 
     def gen_and(self, operands):
         """
@@ -888,7 +1010,7 @@ class LC3Converter():
 
         if t0 == STACK_TOP and t1 == STACK_TOP:
             
-            if commutative:
+            if not commutative:
                 instr += [ ( LADDI, (OP1, OP0, 0) ) ]
                 instr += [ ( LLDR, ( OP0 ,SP, 0 ) ) ]
             else:
@@ -900,10 +1022,19 @@ class LC3Converter():
             tt = t1 if t0 == STACK_TOP else t0
             opt = op1 if t0 == STACK_TOP else op0
 
-            if tt == NUMBER:
-                instr += self.smart_set(OP1, opt)
-            elif tt == ID:
-                instr += self.read_var(OP1, opt)
+            if not commutative and t1 == STACK_TOP:
+                instr += [ ( LADDI, (OP1, OP0, 0) )]
+                if tt == NUMBER:
+                    instr += self.smart_set(OP0, opt)
+                elif tt == ID:
+                    instr += self.read_var(OP0, opt)
+
+            else:
+                if tt == NUMBER:
+                    instr += self.smart_set(OP1, opt)
+                elif tt == ID:
+                    instr += self.read_var(OP1, opt)
+
         else:
 
             if t0 == ID:

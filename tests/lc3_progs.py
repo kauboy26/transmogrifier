@@ -90,8 +90,9 @@ lsamp6 = '''
 main:
     c = 0;
     a = 49;
-    b = 0;
+    b = 12;
     c = a / b;
+    c = a / -b;
 end
 
 '''
