@@ -606,7 +606,18 @@ class LC3Converter():
         return instr
 
     def gen_lthan(self, operands):
-        return self.gen_gthan(operands[::-1])
+        # a < b
+        # R0 = a - b
+        # This will take care of pushing to stack.
+        instr = self.gen_minus(operands)
+
+        # BUG FIXED HERE, see lc3 note 1 
+
+        # if R0 >= 0 set ACCUM = 0
+        instr += [ ( LBR, ( 'n', 1 )) ]
+        instr += [ ( LADDI, ( ACCUM, ZERO, 0) ) ]
+
+        return instr
 
     def gen_gthan(self, operands):
         # a > b
@@ -622,8 +633,19 @@ class LC3Converter():
 
 
     def gen_lthaneq(self, operands):
-        return self.gen_gthaneq(operands[::-1])
+        # a <= b
+        # R0 = a - b
+        instr = self.gen_minus(operands)
 
+        # if R0 > 0 set ACCUM = 0
+        instr += [ ( LBR, ( 'nz', 2 )) ]
+        instr += [ ( LADDI, ( ACCUM, ZERO, 0) ) ]
+        instr += [ ( LBR, ( 'nzp', 1) ) ]
+
+        # else set ACCUM = 1
+        instr += [ ( LADDI, (ACCUM, ZERO, 1)) ]
+
+        return instr
 
     def gen_gthaneq(self, operands):
         # a >= b

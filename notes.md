@@ -65,6 +65,11 @@ The number of variables to be created for a method is known at compilation. Ther
 ## Note 14
 The length of an array is stored in the memory location right before the first element. See the "len" method that has been written in a couple of the test cases.
 
+# LC3 Notes
+
+## Note 1
+The less-than and less-than-eq operators had an issue with commutativity. Since they were reusing the gthan and gthaneq operators by simply flipping the arguments, when the arguments were both of type "$", ```lthan($, $) --> gthan($, $)```, so effectively a gthan operation was being called.
+
 # Other issues
 
 * Tried to execute "a = (1 +;", instead of getting "not enough operands" or "missing paren" message, got the variable "a" is not defined. This is because the stack does not care about the actual positions of operands, and so in the popping process the "a" and "1" are popped to be added, but "a" obviously hasn't been defined yet.
