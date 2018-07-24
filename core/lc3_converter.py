@@ -187,7 +187,7 @@ class LC3Converter():
         # Make room for local variables
         loc_vars = self.func_help[func_name]
         if len(loc_vars):
-            instr += self.smart_add(SP, SP, len(loc_vars))
+            instr += self.smart_add(SP, SP, - len(loc_vars))
 
         # to help with compiling:
         new_frame = {}
