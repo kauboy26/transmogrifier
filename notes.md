@@ -73,6 +73,10 @@ The less-than and less-than-eq operators had an issue with commutativity. Since 
 ## Note 2
 The strings are stored consecutively starting at 0x2800 in memory. When a string is to be created on the stack, the string is copied over from here. Since the location of the strings are known at compilation time, a hardcoded ```set``` is called to get the pointer.
 
+## Note 3
+PUTS and OUTC are defined in the language as "vanishing" functions. Basically, removing them will not alter the flow of the program in any way or change the state of the machine it is running on (i.e. the registers and memory must not be modified).  
+Since on PUTS and OUTC calls, R0 must be loaded with an address (in the case of PUTS) or an ASCII value (for OUT), the current value in R0 is moved to TEMP, and later moved back to R0. We are free to use TEMP, since in this compiler there are no guarantees provided (between methods) on whether TEMP will be used or not.
+
 # Other issues
 
 * Tried to execute "a = (1 +;", instead of getting "not enough operands" or "missing paren" message, got the variable "a" is not defined. This is because the stack does not care about the actual positions of operands, and so in the popping process the "a" and "1" are popped to be added, but "a" obviously hasn't been defined yet.

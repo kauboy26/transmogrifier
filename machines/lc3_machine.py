@@ -46,6 +46,10 @@ class LC3Machine():
 
         self.labels = {}
 
+        # console IO
+        self.buf_ptr = 0;
+        self.buffer = ''
+
 
     def run(self, instructions, table, str_table=[]):
         """
@@ -149,6 +153,14 @@ class LC3Machine():
             self.jsrr(operands)
         elif instruction == LRET:
             self.ret(operands)
+        elif instruction == LPUTS:
+            self.puts()
+        elif instruction == LGETC:
+            self.getc()
+        elif instruction == LOUT:
+            self.out()
+        elif instruction == TRAP:
+            self.trap(operands)
 
 
     def addi(self, operands):
@@ -271,10 +283,60 @@ class LC3Machine():
         self.pc = self.registers[LINK]
 
 
-    def halt(self):
+    def halt(self, operands=None):
 
         self.is_running = False
 
-    def trap(self, operands):
-        vector = operands
+    def getc(self, operands=None):
+        """
+        Gets a single character from the buffer. If the buffer is empty,
+        prompts the user for more to add to the buffer.
+
+        The ASCII value of the character is put into R0.
+
+        This is a TRAP instruction, so the registers will be
+        saved and restored.
+        """
+
+        while self.buf_ptr >= len(self.buffer):
+            self.buf_ptr = 0
+            self.buffer = input()
+
+        c = self.buffer[self.buf_ptr]
+        self.buf_ptr += 1
+
+        self.registers[R0] = ord(c)
+
+    def puts(self, operands=None):
+        """
+        Treats the value in R0 as a pointer to the first character, and
+        starts printing consecutively on to the console.
+
+        This is a TRAP instruction, so the registers will be
+        saved and restored.
+        """
+
+        ptr = self.registers[R0]
+
+        while self.memory[ptr] and ptr < len(self.memory):
+            print(chr(self.memory[ptr]), end='')
+            ptr += 1
+
+        if ptr == len(self.memory):
+            raise MemoryError('Reached end of memory!')
+
+    def out(self, operands=None):
+        """
+        Prints the ASCII representation of the value in R0 to the console.
+        
+        This is a TRAP instruction, so the registers will be
+        saved and restored.
+        """    
+        print(chr(self.registers[R0]), end='')
+
+
+    def trap(self, vector):
+        """
+        Assume registers are saved.
+        """
         self.pc = self.memory[vector]

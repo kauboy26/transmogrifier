@@ -131,6 +131,12 @@ class LC3Converter():
             return self.gen_arr_assign(operands)
         elif operation == MEM_ARR_ASSIGN:
             return self.gen_mem_arr_assign(operands)
+        elif operation == PRINT:
+            return self.gen_puts(operands)
+        elif operation == OUTC:
+            return self.gen_outc(operands)
+        elif operation == GETC:
+            return self.gen_getc(operands)
 
 
     def gen_setup_main(self, operands):
@@ -1424,6 +1430,70 @@ class LC3Converter():
         instr += self.fetch_one_operand(operands[0])
 
         instr += [ (LNOT, (OP0, OP0 ))]
+
+        self.top_reg = True
+        return instr
+
+
+    def gen_puts(self, operand):
+        """
+        a
+
+        puts a
+
+        Note that if a is of type "$", then top_reg must
+        not be turned off!
+
+        SEE NOTE 3
+        """
+
+        t, op = operand
+
+        instr = [ ( LADDI, (TEMP, OP0, 0 ) )]
+        instr += self.fetch_one_operand(operand)
+
+        if t == STACK_TOP:
+            self.top_reg = True
+
+        instr += [ ( LPUTS, (OP0) )]
+        instr += [ ( LADDI, (OP0, TEMP, 0 ) )]
+
+        return instr
+
+    def gen_outc(self, operand):
+        """
+        a
+
+        out a
+
+        If a is of type "$", top_reg will NOT be turned off.
+        """
+
+        t, op = operand
+
+        instr = [ ( LADDI, (TEMP, OP0, 0 ) )]
+        instr += self.fetch_one_operand(operand)
+
+        if t == STACK_TOP:
+            self.top_reg = True
+
+        instr += [ ( LOUT, (OP0) )]
+        instr += [ ( LADDI, (OP0, TEMP, 0 ) )]
+
+        return instr
+
+    def gen_getc(self, operands=None):
+        """
+        if R0 is occupied, pushes it on to the stack.
+        Then a call to getc is made.
+        """
+        instr = []
+
+        if self.top_reg:
+            instr += self.gen_single_push(OP0)
+            self.top_reg = False
+
+        instr += [ ( LGETC, (None) )]
 
         self.top_reg = True
         return instr

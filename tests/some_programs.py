@@ -787,6 +787,18 @@ end
 
 '''
 
+samp_io1 = '''
+
+main:
+    a = "\\nhello, world!\\n";
+    b = 1 + 1 + print(a);
+
+    c = 'K';
+    outc(c);
+end
+
+'''
+
 tooheavy = '''
 # Bootstrapping my friend
 

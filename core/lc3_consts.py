@@ -12,6 +12,10 @@ LJMP = 'jmp'
 LBR = 'br'
 LTRAP = 'trap'
 
+LPUTS = 'puts'
+LGETC = 'getc'
+LOUT = 'out'
+
 
 # shouldn't be used much
 LLEA = 'lea'
