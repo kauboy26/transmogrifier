@@ -476,6 +476,9 @@ class LC3Converter():
         t0, op0 = operands[1]
         t1, op1 = operands[0]
 
+        if t1 == STRING:
+            return self.gen_str_mem_arr_assign(operands)
+
         if t0 != STACK_TOP and t1 != STACK_TOP:
             assert(not self.top_reg)
 
@@ -564,6 +567,77 @@ class LC3Converter():
 
         instr += [ ( LANDI, (ZERO, ZERO, 0 ))]
 
+        return instr
+
+    def gen_str_mem_arr_assign(self, operands):
+        """
+        a, str_b
+
+        create array on stack, size len(str_b)
+        copy letters into array
+
+        mem[a] = ptr to created_array
+
+        """
+
+        t1, s = operands[0]
+        t0, op0 = operands[1]
+
+        if t0 != STACK_TOP:
+            assert(not self.top_reg)
+
+
+        ptr = 0
+        l = len(s) + 1;
+
+        # "s" is the string.
+        if s in self.strings:
+            # get a ptr to where it starts
+            ptr = self.strings[s]
+        else:
+            ptr = self.str_tbl_ptr
+            self.strings[s] = self.str_tbl_ptr
+            self.str_tbl_ptr += len(s) + 1
+            self.str_table.append(s)
+
+        # Make room for the string
+        instr = self.smart_add(SP, SP, -(l + 1))
+
+        # store size variable
+        instr += self.smart_set(TEMP, l)
+        instr += [ ( LSTR, (TEMP, SP, 0 ) )]
+
+        # Figure out where to write the pointer to
+        instr += self.fetch_one_operand(operands[1])
+        assert(not self.top_reg)
+
+        # Calculate pointer to first elem and write
+        instr += [ ( LADDI, (OP1, SP, 1) )]
+        instr += [ ( LSTR, (OP1, OP0, 0 )) ]
+
+        # Now to copy elements over
+        # TEMP has the size
+        # OP1 has the ptr
+
+        # Load ptr to the string OP0 = 0x800 + ptr + 0x2000
+        instr += self.set_to_0x0800(OP0)
+        instr += self.smart_add(OP0, OP0, ptr)
+        instr += [ ( LADDR, ( OP0, TABLE, OP0 ) )]
+
+
+        # the size is guaranteed to be at least 1
+        # Use ZERO here, remember to set it back to normal
+
+        instr += [ ( LLDR, ( ZERO, OP0, 0 ) ) ]
+        instr += [ ( LSTR, ( ZERO, OP1, 0 ))]
+        instr += [ ( LADDI, (OP0, OP0, 1 ))]
+        instr += [ ( LADDI, (OP1, OP1, 1 ))]
+        instr += [ ( LADDI, (TEMP, TEMP, -1 ))]
+        instr += [ ( LBR, ('p', -6) )]
+
+        instr += [ ( LANDI, (ZERO, ZERO, 0 ))]
+
+        self.top_reg = False
         return instr
 
     def gen_mem(self, operand):

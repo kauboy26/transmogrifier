@@ -382,6 +382,26 @@ class ArraySimpleTests(unittest.TestCase):
         self.assertEqual(machine.memory[20], 0)
         self.assertEqual(machine.memory[21], 1)
 
+    def test_memString2D(self):
+        instructions, labels, inv_lbl, func_help = parse(tokenize(sp.samp28))
+        lc3_conv = LC3Converter(instructions, labels, inv_lbl, func_help)
+
+        tree, table, str_table = lc3_conv.convert()
+        pure = flatten(tree)
+        
+        machine = Machine()
+        machine.run(pure, table, str_table)
+
+        for i in range(5):
+            if i % 2 == 0:
+                for j in range(5):
+                    self.assertEqual(machine.memory[5 + i * 5 + j], ord('a'))
+            else:
+                for j in range(5):
+                    self.assertEqual(machine.memory[5 + i * 5 + j], ord('t'))
+
+
+
 
 if __name__ == '__main__':
     unittest.main()

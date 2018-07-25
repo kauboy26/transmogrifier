@@ -756,6 +756,37 @@ end
 
 '''
 
+samp28 = '''
+
+main:
+    a = array(5);
+    i = 0;
+
+    while i < mem(a - 1):
+        if i % 2 == 0: # can be done better with "i & 2"
+            mem(a + i) = "aaaaa";
+        else:
+            mem(a + i) = "ttttt";
+        end
+        i = i + 1;
+    end
+
+    i = 0;
+    j = 0;
+
+    while i < 5:
+        j = 0;
+        while j < 5:
+            mem(5 + i * 5 + j) = mem(mem(a + i) + j);
+            j = j + 1;
+        end
+        i = i + 1;
+    end
+
+end
+
+'''
+
 tooheavy = '''
 # Bootstrapping my friend
 
