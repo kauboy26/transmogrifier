@@ -42,7 +42,7 @@ class BasicArithmeticMainMemUnittests(unittest.TestCase):
         instructions, labels, inv_lbl, func_help = parse(tokenize(sp.samp1))
         lc3_conv = LC3Converter(instructions, labels, inv_lbl, func_help)
 
-        tree, table = lc3_conv.convert()
+        tree, table, str_table = lc3_conv.convert()
         pure = flatten(tree)
 
         machine = Machine()
@@ -61,7 +61,7 @@ class BasicArithmeticMainMemUnittests(unittest.TestCase):
         instructions, labels, inv_lbl, func_help = parse(tokenize(sp.samp2))
         lc3_conv = LC3Converter(instructions, labels, inv_lbl, func_help)
 
-        tree, table = lc3_conv.convert()
+        tree, table, str_table = lc3_conv.convert()
         pure = flatten(tree)
 
         machine = Machine()
@@ -82,7 +82,7 @@ class BasicArithmeticMainMemUnittests(unittest.TestCase):
         instructions, labels, inv_lbl, func_help = parse(tokenize(sp.samp6))
         lc3_conv = LC3Converter(instructions, labels, inv_lbl, func_help)
 
-        tree, table = lc3_conv.convert()
+        tree, table, str_table = lc3_conv.convert()
         pure = flatten(tree)
 
         machine = Machine()
@@ -100,7 +100,7 @@ class EasyFunctionCallsUnittests(unittest.TestCase):
         instructions, labels, inv_lbl, func_help = parse(tokenize(sp.samp3))
         lc3_conv = LC3Converter(instructions, labels, inv_lbl, func_help)
 
-        tree, table = lc3_conv.convert()
+        tree, table, str_table = lc3_conv.convert()
         pure = flatten(tree)
 
         machine = Machine()
@@ -117,7 +117,7 @@ class EasyFunctionCallsUnittests(unittest.TestCase):
         instructions, labels, inv_lbl, func_help = parse(tokenize(sp.samp4))
         lc3_conv = LC3Converter(instructions, labels, inv_lbl, func_help)
 
-        tree, table = lc3_conv.convert()
+        tree, table, str_table = lc3_conv.convert()
         pure = flatten(tree)
 
         machine = Machine()
@@ -135,7 +135,7 @@ class ConditionInOtherFunctionUnittests(unittest.TestCase):
         instructions, labels, inv_lbl, func_help = parse(tokenize(sp.samp5))
         lc3_conv = LC3Converter(instructions, labels, inv_lbl, func_help)
 
-        tree, table = lc3_conv.convert()
+        tree, table, str_table = lc3_conv.convert()
         pure = flatten(tree)
         
         machine = Machine()
@@ -152,7 +152,7 @@ class ConditionInOtherFunctionUnittests(unittest.TestCase):
         instructions, labels, inv_lbl, func_help = parse(tokenize(sp.samp8))
         lc3_conv = LC3Converter(instructions, labels, inv_lbl, func_help)
 
-        tree, table = lc3_conv.convert()
+        tree, table, str_table = lc3_conv.convert()
         pure = flatten(tree)
         
         machine = Machine()
@@ -168,7 +168,7 @@ class ConditionInOtherFunctionUnittests(unittest.TestCase):
         instructions, labels, inv_lbl, func_help = parse(tokenize(sp.samp9))
         lc3_conv = LC3Converter(instructions, labels, inv_lbl, func_help)
 
-        tree, table = lc3_conv.convert()
+        tree, table, str_table = lc3_conv.convert()
         pure = flatten(tree)
         
         machine = Machine()
@@ -184,7 +184,7 @@ class ConditionInOtherFunctionUnittests(unittest.TestCase):
         instructions, labels, inv_lbl, func_help = parse(tokenize(sp.samp10))
         lc3_conv = LC3Converter(instructions, labels, inv_lbl, func_help)
 
-        tree, table = lc3_conv.convert()
+        tree, table, str_table = lc3_conv.convert()
         pure = flatten(tree)
         
         machine = Machine()
@@ -201,7 +201,7 @@ class MassMemoryOpsUnittests(unittest.TestCase):
         instructions, labels, inv_lbl, func_help = parse(tokenize(sp.samp11))
         lc3_conv = LC3Converter(instructions, labels, inv_lbl, func_help)
 
-        tree, table = lc3_conv.convert()
+        tree, table, str_table = lc3_conv.convert()
         pure = flatten(tree)
         
         machine = Machine()
@@ -217,7 +217,7 @@ class MassMemoryOpsUnittests(unittest.TestCase):
         instructions, labels, inv_lbl, func_help = parse(tokenize(sp.samp12))
         lc3_conv = LC3Converter(instructions, labels, inv_lbl, func_help)
 
-        tree, table = lc3_conv.convert()
+        tree, table, str_table = lc3_conv.convert()
         pure = flatten(tree)
         
         machine = Machine()
@@ -232,7 +232,7 @@ class MassMemoryOpsUnittests(unittest.TestCase):
         instructions, labels, inv_lbl, func_help = parse(tokenize(sp.samp14))
         lc3_conv = LC3Converter(instructions, labels, inv_lbl, func_help)
 
-        tree, table = lc3_conv.convert()
+        tree, table, str_table = lc3_conv.convert()
         pure = flatten(tree)
         
         machine = Machine()
@@ -247,7 +247,7 @@ class MassMemoryOpsUnittests(unittest.TestCase):
         instructions, labels, inv_lbl, func_help = parse(tokenize(sp.samp15))
         lc3_conv = LC3Converter(instructions, labels, inv_lbl, func_help)
 
-        tree, table = lc3_conv.convert()
+        tree, table, str_table = lc3_conv.convert()
         pure = flatten(tree)
         
         machine = Machine()
@@ -267,7 +267,7 @@ class AddressOfSimpleUnittests(unittest.TestCase):
         instructions, labels, inv_lbl, func_help = parse(tokenize(sp.samp18))
         lc3_conv = LC3Converter(instructions, labels, inv_lbl, func_help)
 
-        tree, table = lc3_conv.convert()
+        tree, table, str_table = lc3_conv.convert()
         pure = flatten(tree)
         
         machine = Machine()
@@ -282,7 +282,7 @@ class AddressOfSimpleUnittests(unittest.TestCase):
         instructions, labels, inv_lbl, func_help = parse(tokenize(sp.samp16))
         lc3_conv = LC3Converter(instructions, labels, inv_lbl, func_help)
 
-        tree, table = lc3_conv.convert()
+        tree, table, str_table = lc3_conv.convert()
         pure = flatten(tree)
         
         machine = Machine()
@@ -298,7 +298,7 @@ class AddressOfSimpleUnittests(unittest.TestCase):
         instructions, labels, inv_lbl, func_help = parse(tokenize(sp.samp17))
         lc3_conv = LC3Converter(instructions, labels, inv_lbl, func_help)
 
-        tree, table = lc3_conv.convert()
+        tree, table, str_table = lc3_conv.convert()
         pure = flatten(tree)
         
         machine = Machine()
@@ -314,7 +314,7 @@ class ArraySimpleTests(unittest.TestCase):
         instructions, labels, inv_lbl, func_help = parse(tokenize(sp.samp20))
         lc3_conv = LC3Converter(instructions, labels, inv_lbl, func_help)
 
-        tree, table = lc3_conv.convert()
+        tree, table, str_table = lc3_conv.convert()
         pure = flatten(tree)
         
         machine = Machine()
@@ -332,7 +332,7 @@ class ArraySimpleTests(unittest.TestCase):
         instructions, labels, inv_lbl, func_help = parse(tokenize(sp.samp22))
         lc3_conv = LC3Converter(instructions, labels, inv_lbl, func_help)
 
-        tree, table = lc3_conv.convert()
+        tree, table, str_table = lc3_conv.convert()
         pure = flatten(tree)
         
         machine = Machine()
@@ -353,7 +353,7 @@ class ArraySimpleTests(unittest.TestCase):
         instructions, labels, inv_lbl, func_help = parse(tokenize(sp.samp26))
         lc3_conv = LC3Converter(instructions, labels, inv_lbl, func_help)
 
-        tree, table = lc3_conv.convert()
+        tree, table, str_table = lc3_conv.convert()
         pure = flatten(tree)
         
         machine = Machine()
@@ -368,17 +368,19 @@ class ArraySimpleTests(unittest.TestCase):
             self.assertTrue(machine.memory[arr + i] == i, i)
 
 
-#     def test_palinString(self):
+    def test_palinString(self):
 
-#         machine = Machine()
+        instructions, labels, inv_lbl, func_help = parse(tokenize(sp.samp23))
+        lc3_conv = LC3Converter(instructions, labels, inv_lbl, func_help)
 
-#         instructions, labels, inv_lbl, func_help = parse(tokenize(sp.samp23))
-#         machine.run(instructions, labels, inv_lbl, func_help)
+        tree, table, str_table = lc3_conv.convert()
+        pure = flatten(tree)
+        
+        machine = Machine()
+        machine.run(pure, table, str_table)
 
-#         self.assertTrue(machine.memory[20] == 0)
-#         self.assertTrue(machine.memory[21] == 1)
-
-#         print('hello world.')
+        self.assertEqual(machine.memory[20], 0)
+        self.assertEqual(machine.memory[21], 1)
 
 
 if __name__ == '__main__':

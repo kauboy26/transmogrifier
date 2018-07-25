@@ -1374,7 +1374,7 @@ class LC3Converter():
             instr += [(LADDI, (dest_reg, dest_reg, number))]
         else:
             instr += [(LADDI, (dest_reg, src_reg, 15))]
-            number += 15
+            number -= 15
             while number > 15:
                 instr += [(LADDI, (dest_reg, dest_reg, 15))]
                 number -= 15
