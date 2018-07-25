@@ -113,7 +113,7 @@ end
 samp5 = '''
 declare func1(a, b, c);
 declare f(fa);
-declare func2(a, b);
+# declare func2(a, b);
 
 declare is_prime(n);
 
@@ -533,6 +533,7 @@ main:
     asce(b);
 
     # Assert that a has consecutive ints within it
+    mem(100) = a;
 
 end
 
@@ -587,6 +588,7 @@ main:
 
     ms(arr);
 
+    mem(150) = arr;
 
 end
 
@@ -720,6 +722,28 @@ declare xx(a);
 main:
     a = xx + zz;
 end
+'''
+
+samp26 = '''
+
+
+main:
+    arr = 0;
+    mem(addrOf(arr)) = array(20);
+
+
+    i = 0;
+    b = 100;
+
+    # mem(100) = arr;
+    mem(b * 2 / 2) = arr;
+
+    while i < mem(arr - 1):
+        mem(arr + i) = i;
+        i = i + 1;
+    end
+end
+
 '''
 
 tooheavy = '''

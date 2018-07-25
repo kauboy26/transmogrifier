@@ -120,6 +120,10 @@ class LC3Converter():
             return self.gen_mem(operands)
         elif operation == MEM_ASSIGN:
             return self.gen_mem_assign(operands)
+        elif operation == ARR_ASSIGN:
+            return self.gen_arr_assign(operands)
+        elif operation == MEM_ARR_ASSIGN:
+            return self.gen_mem_arr_assign(operands)
 
 
     def gen_setup_main(self, operands):
@@ -407,6 +411,84 @@ class LC3Converter():
         self.top_reg = False
         return instr
 
+
+    def gen_arr_assign(self, operands):
+        """
+        a, b
+    
+        create array of size "b" on the stack
+        a = address of first element of array of size "b"
+        """
+
+        t1, op1 = operands[0]
+        t0, var = operands[1]
+
+        if t1 != STACK_TOP:
+            assert(not self.top_reg)
+
+        instr = self.fetch_one_operand(operands[0])
+        assert(not self.top_reg)
+
+        # We have the size of the array in OP0
+
+        # make room for array and accompanying size var
+        instr += [ ( LNOT, ( OP1, OP0 )) ]
+        # instr += [ ( LADDI, (OP0, OP0, 1 )) ] 
+        instr += [ ( LADDR, (SP, SP, OP1 )) ]
+        # instr += [ ( LADDI, ( SP, SP, -1) )]
+
+        # Store the size variable
+        instr += [ ( LSTR, ( OP0, SP, 0) )]
+
+        # get loc of variable
+        instr += self.smart_add(OP0, FP, self.stack_frame[var])
+
+        # store ptr to first elem
+        instr += [ ( LADDI, ( OP1, SP, 1 ) ) ]
+        instr += [ ( LSTR, (OP1, OP0, 0) ) ] 
+
+        self.top_reg = False
+        return instr
+
+
+    def gen_mem_arr_assign(self, operands):
+        """
+        a, b
+
+        create array of size "b" on the stack
+        mem(a) = address of first element of array of size "b"
+        """
+
+        instr = []
+
+        t0, op0 = operands[1]
+        t1, op1 = operands[0]
+
+        if t0 != STACK_TOP and t1 != STACK_TOP:
+            assert(not self.top_reg)
+
+        instr += self.fetch_two_operands(operands, commutative=False)
+        assert(not self.top_reg)
+
+        # Now a is in OP0, b is in OP1
+
+        # We have the size of the array in OP1
+
+        # make room for array and accompanying size var
+        instr += [ ( LNOT, ( TEMP, OP1 )) ]
+        # instr += [ ( LADDI, (OP0, OP0, 1 )) ] 
+        instr += [ ( LADDR, (SP, SP, TEMP )) ]
+        # instr += [ ( LADDI, ( SP, SP, -1) )]
+
+        # Store the size variable
+        instr += [ ( LSTR, ( OP1, SP, 0) )]
+
+        # store ptr to first elem at mem[a] (i.e. mem(OP0))
+        instr += [ ( LADDI, ( OP1, SP, 1 ) ) ] # ptr to first elem
+        instr += [ ( LSTR, (OP1, OP0, 0) ) ] 
+
+        self.top_reg = False
+        return instr
 
     def gen_mem(self, operand):
         """
