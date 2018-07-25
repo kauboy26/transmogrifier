@@ -29,6 +29,13 @@ class LC3Converter():
         self.table = {}
         self.table_print = []
 
+        # See LC3 note 2 on how strings work
+        self.strings = {}
+        self.str_table = []
+
+        # points to the first usable location
+        self.str_tbl_ptr = 0
+
         self.init_table()
 
     def convert(self):
@@ -46,7 +53,7 @@ class LC3Converter():
             total_len += len(block)
             tree.append((i, block))
 
-        return tree, self.table_print
+        return tree, self.table_print, self.str_table
 
     def convert_operation(self, instruction):
         """
@@ -423,6 +430,11 @@ class LC3Converter():
         t1, op1 = operands[0]
         t0, var = operands[1]
 
+        if t1 == STRING:
+            # Since there is a good amount of logic for
+            # the string thing, I've separated it.
+            return self.gen_str_arr_assign(operands)
+
         if t1 != STACK_TOP:
             assert(not self.top_reg)
 
@@ -488,6 +500,70 @@ class LC3Converter():
         instr += [ ( LSTR, (OP1, OP0, 0) ) ] 
 
         self.top_reg = False
+        return instr
+
+    def gen_str_arr_assign(self, operands):
+        """
+        a, str_b
+
+        create array on stack, size len(str_b)
+        copy letters into array
+
+        a = ptr to created_array
+
+        """
+        assert(not self.top_reg)
+
+        t1, s = operands[0]
+        t0, var = operands[1]
+
+        ptr = 0
+        l = len(s) + 1;
+
+        # "s" is the string.
+        if s in self.strings:
+            # get a ptr to where it starts
+            ptr = self.strings[s]
+        else:
+            ptr = self.str_tbl_ptr
+            self.strings[s] = self.str_tbl_ptr
+            self.str_tbl_ptr += len(s) + 1
+            self.str_table.append(s)
+
+        # Make room for the string
+        instr = self.smart_add(SP, SP, -(l + 1))
+
+        # store size variable
+        instr += self.smart_set(TEMP, l)
+        instr += [ ( LSTR, (TEMP, SP, 0 ) )]
+
+        # store ptr to the string
+        instr += self.smart_add(OP0, FP, self.stack_frame[var])
+        instr += [ ( LADDI, (OP1, SP, 1) )]
+        instr += [ ( LSTR, (OP1, OP0, 0 )) ]
+
+        # Now to copy elements over
+        # TEMP has the size
+        # OP1 has the ptr
+
+        # Load ptr to the string OP0 = 0x800 + ptr + 0x2000
+        instr += self.set_to_0x0800(OP0)
+        instr += self.smart_add(OP0, OP0, ptr)
+        instr += [ ( LADDR, ( OP0, TABLE, OP0 ) )]
+
+
+        # the size is guaranteed to be at least 1
+        # Use ZERO here, remember to set it back to normal
+
+        instr += [ ( LLDR, ( ZERO, OP0, 0 ) ) ]
+        instr += [ ( LSTR, ( ZERO, OP1, 0 ))]
+        instr += [ ( LADDI, (OP0, OP0, 1 ))]
+        instr += [ ( LADDI, (OP1, OP1, 1 ))]
+        instr += [ ( LADDI, (TEMP, TEMP, -1 ))]
+        instr += [ ( LBR, ('p', -6) )]
+
+        instr += [ ( LANDI, (ZERO, ZERO, 0 ))]
+
         return instr
 
     def gen_mem(self, operand):
@@ -1524,3 +1600,18 @@ class LC3Converter():
                 self.table[rlbl] = i
                 self.table_print.append((rlbl, 0))
                 i += 1
+
+
+    def set_to_0x0800(self, register):
+        """
+        Sets the register to 0x0800 = 2**11
+        """
+
+        # reg = 16
+        instr = [ ( LADDI, (register, ZERO, 15 )) ]
+        instr += [ ( LADDI, (register, register, 1 ))]
+
+        for i in range(0, 7):
+            instr += [ ( LADDR, (register, register, register ))]
+
+        return instr

@@ -40,14 +40,14 @@ class LC3Machine():
         print('LC3 Seed:', self.seed)
 
         seed(self.seed)
-        self.memory = [0 for i in range(0, self.memsize)]
+        self.memory = [randint(-2**16, 2**16) for i in range(0, self.memsize)]
 
         self.registers = [ 0 for i in range(0, 8)]
 
         self.labels = {}
 
 
-    def run(self, instructions, table, labels):
+    def run(self, instructions, table, str_table=[]):
         """
         """
         self.labels = {STACK_LBL: -1, TABLE_LBL: -2}
@@ -55,6 +55,7 @@ class LC3Machine():
         self.memory[self.orig - 2] = 0x2000
 
         self.write_table(table)
+        self.write_str_table(str_table)
 
         self.pc = 0
         self.is_running = True
@@ -80,13 +81,30 @@ class LC3Machine():
 
     def write_table(self, table):
         """
-        Writes the label table at x2000. Adds x3000 to all the entries.
+        Writes the label table at x2000.
         """
         i = 0x2000
 
         for lbl, val in table:
             self.memory[i] = val
             i += 1
+
+
+    def write_str_table(self, str_table):
+        """
+        Writes all the strings consecutively starting at address 0x2800
+        """
+
+        i = 0x2800
+
+        for s in str_table:
+            for c in s:
+                self.memory[i] = ord(c)
+                i += 1
+
+            self.memory[i] = 0
+            i += 1
+
 
     def print_memory(self, low, high):
         for i in range(low, high):
@@ -97,7 +115,7 @@ class LC3Machine():
         for i in range(8):
             print('R{}'.format(i), ': {:8}'.format(self.registers[i]), '  :   ', format(self.registers[i], '04x'))
 
-        print('CC :', self.CC)
+        print('CC :', format(self.CC, '03b'))
         print('PC :', self.pc)
 
     def perform_operation(self, instruction, operands):

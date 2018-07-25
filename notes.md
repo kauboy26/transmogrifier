@@ -70,6 +70,9 @@ The length of an array is stored in the memory location right before the first e
 ## Note 1
 The less-than and less-than-eq operators had an issue with commutativity. Since they were reusing the gthan and gthaneq operators by simply flipping the arguments, when the arguments were both of type "$", ```lthan($, $) --> gthan($, $)```, so effectively a gthan operation was being called.
 
+## Note 2
+The strings are stored consecutively starting at 0x2800 in memory. When a string is to be created on the stack, the string is copied over from here. Since the location of the strings are known at compilation time, a hardcoded ```set``` is called to get the pointer.
+
 # Other issues
 
 * Tried to execute "a = (1 +;", instead of getting "not enough operands" or "missing paren" message, got the variable "a" is not defined. This is because the stack does not care about the actual positions of operands, and so in the popping process the "a" and "1" are popped to be added, but "a" obviously hasn't been defined yet.

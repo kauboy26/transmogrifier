@@ -746,6 +746,16 @@ end
 
 '''
 
+samp27 = '''
+
+main:
+    # 14 characters long including NULL
+    a = "hello, world!";
+    b = "goooood!";
+end
+
+'''
+
 tooheavy = '''
 # Bootstrapping my friend
 
