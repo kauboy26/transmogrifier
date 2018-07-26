@@ -9,10 +9,11 @@ from core.miscell import check
 keywords = {'def': 0, 'if': 0, 'elif': 0,
         'else': 0, 'while': 0, 'end': 0,
         'main': 0, 'return': 0, 'declare': 0,
-        'define': 0}
+        'define': 0, 'macro': 0}
 
-multichar_ops = {'mem': 0, 'addrOf': 0, 'block': 0,
-                'inject': 0, 'print': 0, 'and': 0, 'or': 0, 'not': 0}
+multichar_ops = {'mem': 0, 'addrOf': 0, 'array': 0,
+                'inject': 0, 'print': 0, 'and': 0, 'or': 0, 'not': 0,
+                'getc': 0, 'outc': 0}
 
 NUMBER = 0
 KEYWORD = 1
@@ -50,6 +51,28 @@ def is_special(c):
         c == '<' or c == '>' or\
         c == '"' or c == '\'' or\
         c == '#'
+
+def convert_escape(c, line_number):
+    """
+    Returns the escape character.
+    """
+    if c == 'n':
+        return '\n'
+    elif c == '0':
+        return '\0'
+    elif c == 't':
+        return '\t'
+    elif c == '"':
+        return '"'
+    elif c == '\'':
+        return '\''
+    elif c == '\\':
+        return '\\'
+    elif c == 'v':
+        return '\v'
+    
+    check(False, 'Invalid escape character.', line_number)
+
 
 def tokenize(in_str):
     """
@@ -95,22 +118,36 @@ def tokenize(in_str):
             start_index = i
             if in_str[i] == '"':
                 # Capture the entire string
+
+                str_lit = []
+
                 i = i + 1
                 while i < length and in_str[i] != '"' and in_str[i] != '\n':
-                    # Screw escape characters
+                    c = in_str[i]
+                    if c == '\\':
+                        i = i + 1
+                        check(i < length, 'Bad escape.', line_number)
+                        c = convert_escape(in_str[i], line_number)
+
+                    str_lit.append(c)
                     i = i + 1
-                check(i < length and in_str != '\n', 'Incomplete string: {}" on line {}'
-                    .format(in_str[start_index:i], line_number))
-                token_list.append((STRING, in_str[start_index + 1:i]))
+
+                check(i < length and in_str != '\n', 'Incomplete string: "{}".'
+                    .format(in_str[start_index:i]), line_number)
+
+                token_list.append((STRING, ''.join(str_lit)))
                 i = i + 1
             elif in_str[i] == '\'':
                 i = i + 1
-                check(i < length and in_str[i] != '\n', 'Bad character formatting on line {}'
-                    .format(line_number))
+                check(i < length and in_str[i] != '\n', 'Bad character formatting.', line_number)
+                c = in_str[i]
+                if in_str[i] == '\\':
+                    i = i + 1
+                    check(i < length, 'Bad (incomplete) character. Error escaping.', line_number)
+                    c = convert_escape(in_str[i], line_number)
                 i = i + 1
-                check(i < length and in_str[i] == '\'', 'Lone " \' " found on line {}'.
-                    format(line_number))
-                token_list.append((NUMBER, ord(in_str[i - 1])))
+                check(i < length and in_str[i] == '\'', 'Invalid character.', line_number)
+                token_list.append((NUMBER, ord(c)))
                 i = i + 1  
             elif in_str[i] == '#':
                 # capture the entire comment, which ends at the new line character.

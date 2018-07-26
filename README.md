@@ -1,2 +1,19 @@
 # About
-Transmogrifier is a compiler targeting the LC3 ISA. The project is still much underway, but a plan for it exists. Over the past few weeks, I've changed that plan multiple times, so I don't see any point in documenting it here in this README. The details of the language it compiles will definitely be published later. As for now, I am trying to get it to a decent, usable state where the compiler works if the user's syntax is sensible (if the user screws up, the compiler may or may not give a warning). Testing also seems to be a problem, so I may have to build some tools for that too.
+Transmogrifier is a compiler targeting the LC3 ISA. The project is still much underway, but a plan for it exists. The complete details of the language it compiles will definitely be published later. Currently these are the features that are planned (almost guaranteed to be implemented):  
+* Standard arithmetic, relationational, logical and bitwise operators (no XOR though)
+* Variables (of course)
+* Control flow with ```if```, ```elif```, ```else``` and ```while```
+* Functions
+* Direct memory I/O
+* An "address of" operator to find the address of some variable
+* Variable length arrays that can be created on the stack
+* Strings (on the stack)
+* Console input / output
+
+If possible, I will do these too:  
+* Short circuit logical evaluation
+* A version of malloc
+* Optimization (probably not)
+* Garbage collection (definitely not)
+
+For now, you can find the syntax by looking at the sample files provided.

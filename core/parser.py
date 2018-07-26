@@ -1,80 +1,10 @@
 from random import randint
 from core.miscell import check
+from core.constants import *
 
 # I will use these constants to save myself some trouble in
 # typing. Sublime's autocompletion feature my friend.
-NUMBER = 0
-KEYWORD = 1
-OPERATOR = 2
-ID = 3
-STRING = 4
-NEWLINE = 5
-COMMENT = 6
 
-STACK_TOP = 8
-MEM_LOC = 9
-
-ADDRESS = 10
-
-AND = 'and'
-OR = 'or'
-NOT = 'not'
-B_AND = '&' # bitwise and, or and not
-B_OR = '|'
-B_NOT = '~'
-MULTI = '*'
-DIVIS = '/'
-MODULO = '%'
-PLUS = '+'
-MINUS = '-'
-EQUAL = '='
-COMMA = ','
-SEMICOLON = ';'
-COLON = ':'
-LPAREN = '('
-RPAREN = ')'
-LBRACKET = '['
-RBRACKET = ']'
-LTHAN = '<'
-GTHAN = '>'
-LTHANEQ = '<='
-GTHANEQ = '>='
-DOUBLE_EQ = '=='
-
-MEM = 'mem'
-ADDRESS_OF = 'addrOf'
-BLOCK = 'block'
-DEF = 'def'
-DEF2 = 'define'
-DECLARE = 'declare'
-IF = 'if'
-ELIF = 'elif'
-ELSE = 'else'
-WHILE = 'while'
-END = 'end'
-MAIN = 'main'
-RETURN = 'return'
-PRINT = 'print'
-INJECT = 'inject'
-
-# These are different, since they instruct the (IR) machine what to do.
-CREATE = '__create__'
-POP = '__pop__'
-PUSH = '__push__'
-HALT = '__halt__'
-SETUP_FUNC = '__setup_func__'
-DESTROY_VARS = '__destroy_vars__'
-JROUTINE = '__jump_to_routine___'
-R_TOCALLER = '__return_to_caller__'
-FETCH_RV = '__fetch_return_value__'
-LOAD_CC = '__load_cc__'
-COND_BRANCH = '__cond_branch__'
-BRANCH = '__branch__'
-SETUP_MAIN = '__setup_main__'
-MEM_ASSIGN = '__mem_assign__'
-
-HIGHEST_PRECEDENCE = 500
-LOWEST_PRECEDENCE = 0
 
 def parse(token_list=[]):
     check(token_list, 'The compiler that one not working guru.', -1)
@@ -82,28 +12,36 @@ def parse(token_list=[]):
     # For now just do some crap testing
     # Not too sure of some of these, such as comma vs semicolon. As far as I can
     # see right now, there won't be a time when the two will be compared.
-    precedence = {MULTI: 150, DIVIS: 150, MODULO: 150, PLUS: 130, MINUS: 130,
+    precedence = {  UNARY_MINUS: 152,
+                    MULTI: 150, DIVIS: 150, MODULO: 150, PLUS: 130, MINUS: 130,
+                    B_NOT: 129, B_AND: 128, B_OR: 127,
                     NOT: 110, AND: 100, OR: 99, LTHAN: 120, GTHAN:120, LTHANEQ: 120,
                     GTHANEQ: 120, DOUBLE_EQ: 120, EQUAL: 80, COMMA: 70, SEMICOLON: 70,
                     COLON: 70,
                     LPAREN: 0, RPAREN: 1,
                     # functions:
-                    MEM: 200, ADDRESS_OF: 200, BLOCK: 200, PRINT: 200, INJECT: 200}
+                    MEM: 200, ADDRESS_OF: 200, ARRAY: 200, GETC: 200, PRINT: 200,
+                    OUTC: 200, INJECT: 200}
 
 
-    args_needed = {MULTI: 2, DIVIS: 2, MODULO: 2, PLUS: 2, MINUS: 2, NOT: 1,
+    args_needed = { UNARY_MINUS: 1,
+                    MULTI: 2, DIVIS: 2, MODULO: 2, PLUS: 2, MINUS: 2, NOT: 1,
+                    B_NOT: 1, B_AND: 2, B_OR: 2,
                     AND: 2, OR: 2, LTHAN: 2, GTHAN: 2, GTHANEQ: 2, LTHANEQ: 2,
                     DOUBLE_EQ: 2, EQUAL: 2,
                     MEM: 1, ADDRESS_OF: 1,
-                    BLOCK: 1, PRINT: 1, INJECT: 1}
+                    ARRAY: 1, GETC: 0, PRINT: 1, OUTC: 1, INJECT: 1}
 
-    primitive_functions = {MEM: 0, ADDRESS_OF: 0, BLOCK: 0, PRINT: 0,
-                            INJECT: 0}
+    primitive_functions = { MEM: 0, ADDRESS_OF: 0, ARRAY: 0, GETC: 0,
+                            INJECT: 0, PRINT: 0, OUTC: 0}
 
-    effect_of = {MULTI: -1, DIVIS: -1, MODULO: -1, PLUS: -1, MINUS: -1, NOT: 0,
-                    AND: -1, OR: -1, LTHAN: -1, GTHAN: -1, GTHANEQ: -1, LTHANEQ: -1,
+    effect_of = {   UNARY_MINUS: 0,
+                    MULTI: -1, DIVIS: -1, MODULO: -1, PLUS: -1, MINUS: -1,
+                    B_NOT: 0, B_AND: -1, B_OR: -1,
+                    NOT: 0, AND: -1, OR: -1,
+                    LTHAN: -1, GTHAN: -1, GTHANEQ: -1, LTHANEQ: -1,
                     DOUBLE_EQ: -1, EQUAL: -1, MEM: 0, ADDRESS_OF: 0,
-                    BLOCK: 0, PRINT: 0, INJECT: 0}
+                    ARRAY: 0, GETC: 1, INJECT: 0, PRINT: 0, OUTC: 0}
 
     line_number = 1
     labels = {}
@@ -112,6 +50,12 @@ def parse(token_list=[]):
 
     functions = {}
     defined_funcs = {}
+
+    # this is used to figure out how much stack space to allocate
+    # initially (counts num vars created).
+    func_help = {}
+    vars_of_func = {}
+    curr_func = None
 
     # See note 4
     variables = {}
@@ -133,6 +77,8 @@ def parse(token_list=[]):
 
     ir_form = []
 
+    macros = {}
+
 
     i = 0
     length = len(token_list)
@@ -147,7 +93,14 @@ def parse(token_list=[]):
             if value in functions:
                 token_list[i] = (OPERATOR, value)
                 continue
+            elif value in macros:
+                token_list[i] = ((NUMBER, macros[value]))
+                continue
             num_stack.append((ID, value))
+            effect[-1] += 1
+            i = i + 1
+        elif tk_type == STRING:
+            num_stack.append((ARR_TYPE, token_list[i]))
             effect[-1] += 1
             i = i + 1
         elif tk_type == KEYWORD:
@@ -162,29 +115,46 @@ def parse(token_list=[]):
                 vars_this_block.append([])
                 curr_scope_type.append(MAIN)
 
+
+                curr_func = MAIN_FUNC
+                func_help[curr_func] = []
+                vars_of_func = {}
+
                 ir_form.append((None, SETUP_MAIN))
+            elif value == MACRO:
+                check(not curr_scope_type, 'Cannot define macro within a method.', line_number)
+                i = process_macro(macros, token_list, i, functions, line_number)
+                i = i + 1
+
             elif value == DECLARE:
                 # Process the entire declare here.
                 func_name, args_count, i, line_number\
-                    = process_declare(token_list, i, functions, line_number)
+                    = process_declare(token_list, i, functions, macros, line_number)
                 functions[func_name] = args_count
                 precedence[func_name] = 200
                 args_needed[func_name] = args_count
                 effect_of[func_name] = 1 - args_count
+
+                func_help[func_name] = []
+
             elif value == DEF or value == DEF2:
                 check(not proc_func, 'Functions cannot be declared within functions.', line_number)
                 proc_func = True
                 func_name, param_list, i, line_number\
                     = process_define(token_list, i, functions, defined_funcs,
                         line_number)
-                ir_form.append((param_list, SETUP_FUNC))
+                ir_form.append(((func_name, param_list), SETUP_FUNC))
 
-                labels[func_name] = len(ir_form) - 1
-                ln_to_label[len(ir_form) - 1] = func_name
+                func_lbl = generate_func_lbl(func_name)
+                labels[func_lbl] = len(ir_form) - 1
+                ln_to_label[len(ir_form) - 1] = func_lbl
                 n_lbl += 1
 
                 vars_this_block.append(param_list[:])
                 curr_scope_type.append(DEF)
+
+                curr_func = func_name
+                vars_of_func = {}
 
                 for param in param_list:
                     variables[param] = 0
@@ -218,11 +188,7 @@ def parse(token_list=[]):
                 n_lbl += 1
                 cond_lbls.append((generate_label(n_lbl, line_number), end_lbl))
 
-                vars_to_remove = vars_this_block.pop()
-                remove_variables(vars_to_remove, variables)
-
-                if vars_to_remove:
-                    ir_form.append((vars_to_remove, DESTROY_VARS))
+                remove_variables(vars_this_block.pop(), variables)
 
                 vars_this_block.append([])
                 i = i + 1
@@ -256,11 +222,7 @@ def parse(token_list=[]):
                 
                 cond_lbls.append((lbl, end_lbl))
 
-                vars_to_remove = vars_this_block.pop()
-                remove_variables(vars_to_remove, variables)
-
-                if vars_to_remove:
-                    ir_form.append((vars_to_remove, DESTROY_VARS))
+                remove_variables(vars_this_block.pop(), variables)
 
                 vars_this_block.append([])
 
@@ -285,32 +247,29 @@ def parse(token_list=[]):
                 check(curr_scope_type, 'Mismatched "end" (extra?).', line_number)
                 scope_type = curr_scope_type.pop()
 
-                vars_to_remove = vars_this_block.pop()
-                # ir_form.append((vars_to_remove, DESTROY_VARS))
-                remove_variables(vars_to_remove, variables)
+                remove_variables(vars_this_block.pop(), variables)
 
                 if scope_type == MAIN:
-                    if vars_to_remove:
-                        ir_form.append((vars_to_remove, DESTROY_VARS))
+
+                    vars_to_clean = func_help[MAIN_FUNC]
+                    if vars_to_clean:
+                        ir_form.append((vars_to_clean, CLEAN_MAIN))
                         
                     ir_form.append((None, HALT))
                     proc_func = False
+                    curr_func = None
                 elif scope_type == DEF:
                     ir_form.append((None, R_TOCALLER))
                     proc_func = False
+                    curr_func = None
                 elif scope_type == IF:
                     lbl, end_lbl = cond_lbls.pop()
 
-                    if vars_to_remove:
-                        ir_form.append((vars_to_remove, DESTROY_VARS))
                     labels[lbl] = len(ir_form)
                     ln_to_label[len(ir_form)] = lbl
 
                 elif scope_type == ELIF:
                     lbl, end_lbl = cond_lbls.pop()
-
-                    if vars_to_remove:
-                        ir_form.append((vars_to_remove, DESTROY_VARS))
 
                     labels[lbl] = len(ir_form) # Note 8
                     labels[end_lbl] = len(ir_form)
@@ -318,17 +277,11 @@ def parse(token_list=[]):
                 elif scope_type == ELSE:
                     lbl, end_lbl = cond_lbls.pop()
 
-                    if vars_to_remove:
-                        ir_form.append((vars_to_remove, DESTROY_VARS))
-
                     labels[end_lbl] = len(ir_form)
                     ln_to_label[len(ir_form)] = end_lbl # TODO POSSIBLE BUG FROM LABEL CLASH (empty else)?
                 elif scope_type == WHILE:
 
                     end_lbl, head_lbl = cond_lbls.pop()
-
-                    if vars_to_remove:
-                        ir_form.append((vars_to_remove, DESTROY_VARS))
 
                     ir_form.append((head_lbl, BRANCH))
 
@@ -358,15 +311,13 @@ def parse(token_list=[]):
 
             if (value == PLUS or value == MINUS) and effect[-1] == 0:
                 if value == MINUS:
-                    num_stack.append((NUMBER, -1))
-                    effect[-1] += 1
-                    value = MULTI
-                else: # value == PLUS
-                    # Skip this iteration. Basically fuck the extra plus sign.
-                    i = i + 1
-                    continue
+                    op_stack.append(UNARY_MINUS)
+                    # effect[-1] += effect_of[UNARY_MINUS] -- Does nothing
+                # In case of a plus, just skip it.
+                i = i + 1
+                continue
 
-            if value == NOT:
+            if value == NOT or value == B_NOT:
                 # see note 1.
                 op_stack.append(value)
                 # effect[-1] += effect_of[NOT] -- Does nothing
@@ -384,26 +335,37 @@ def parse(token_list=[]):
 
 
                 operands = [num_stack.pop() for i in range(args_needed[operation])]
-                # Ensure the required variables exist, or create variables in
-                # the case of an assignment statement.
+
                 if operation == EQUAL:
                     check_operands_exist(operands[:-1], variables, line_number)
                     check(not op_stack, 'Illegal statement.', line_number) # See note 3
                     c, v = operands[-1]
+                    c1, v1 = operands[0]
                     check(c == ID or c == MEM_LOC, 'Cannot assign value to a literal.', line_number)
-                    if c == ID and v not in variables:
-                        # Create the variable
-                        ir_form.append((operands, CREATE))
-                        vars_this_block[-1].append(v)
-                        created_vars = created_vars + 1
-                        variables[v] = 0
-                    elif c == MEM_LOC:
-                        ir_form.append(([operands[0], v], MEM_ASSIGN))
+                    if c == MEM_LOC:
+                        if c1 == ARR_TYPE:
+                            ir_form.append(([v1, v], MEM_ARR_ASSIGN))
+                        else:
+                            ir_form.append(([operands[0], v], MEM_ASSIGN))
                     else:
-                        ir_form.append((operands, operation))
+                        if v not in variables:
+                            # note 12
+                            vars_this_block[-1].append(v)
+                            created_vars = created_vars + 1
+                            variables[v] = 0
+                            if v not in vars_of_func:
+                                func_help[curr_func].append(v)
+                                vars_of_func[v] = 0
+                        if c1 == ARR_TYPE:
+                            ir_form.append(([v1, operands[1]], ARR_ASSIGN))
+                        else:
+                            ir_form.append((operands, operation))
+
                     continue
                 else:
                     check_operands_exist(operands, variables, line_number)
+
+                validate_operation(operands, line_number)
 
                 if operation in functions or operation in primitive_functions:
                     args_found = args_count_stack.pop()
@@ -425,11 +387,23 @@ def parse(token_list=[]):
                             c, v = operands[0]
                             check(c == ID, 'Cannot find the address of a non-variable.', line_number)
                             num_stack.append((ADDRESS, v))
-
+                        elif operation == ARRAY:
+                            c, v = operands[0]
+                            check(c != ARR_TYPE, 'Array arguments bad.', line_number)
+                            num_stack.append((ARR_TYPE, operands[0]))
+                        elif operation == PRINT:
+                            num_stack.append(operands[0])
+                            ir_form.append((operands[0], PRINT))
+                        elif operation == GETC:
+                            num_stack.append((STACK_TOP, '$'))
+                            ir_form.append((None, GETC))
+                        elif operation == OUTC:
+                            num_stack.append(operands[0])
+                            ir_form.append((operands[0], OUTC))
                         continue
 
                     ir_form.append((operands, PUSH))
-                    ir_form.append((operation, JROUTINE))
+                    ir_form.append((generate_func_lbl(operation), JROUTINE))
                     ir_form.append((operands, FETCH_RV))
                     num_stack.append((STACK_TOP, '$'))
                     continue
@@ -482,8 +456,9 @@ def parse(token_list=[]):
                         ret_statement = False
                     elif c == STACK_TOP:
                         ir_form.append((None, POP)) # See Note 6
-                else:
-                    check(not ret_statement, '"return" must return something.', line_number)
+                elif ret_statement:
+                    ret_statement = False
+                    ir_form.append((None, R_TOCALLER))
             elif value == COLON:
                 check(proc_cond_header, 'Illegal use of ":".', line_number)
                 check(not op_stack, 'Illegal statement, unexpected ":".', line_number)
@@ -513,9 +488,20 @@ def parse(token_list=[]):
     # I think this may cause the user a lot of grief. A missing semicolon on one
     # line may not get detected until much much later. Perhaps this message needs
     # to be broadcast elsewhere.
+    check(not curr_scope_type, 'Mismatched "end" (missing at end of file?)', line_number)
     check(not op_stack and not num_stack, 'Missing semicolon?', line_number)
+    check_all_funcs_defined(functions, defined_funcs)
 
-    return ir_form, labels, ln_to_label
+    return ir_form, labels, ln_to_label, func_help
+
+def validate_operation(operands, line_number):
+    """
+    Makes sure the operation is valid for those operands.
+    """
+    for c, v in operands:
+        check(c != MEM_LOC and c != ARR_TYPE,
+            'Invalid operands for operation. Found unexpected'
+            ' memory location or array.', line_number)
 
 
 def check_operands_exist(operands, variables, line_number):
@@ -526,7 +512,17 @@ def check_operands_exist(operands, variables, line_number):
         check(c != ID or v in variables, 'The variable "{}" has not been'
             ' defined'.format(v), line_number)
 
-def process_declare(token_list, i, functions, line_number):
+def check_all_funcs_defined(functions, defined_funcs):
+    """
+    Makes sure all the declared functions were defined.
+    """
+    for func in functions:
+        check(func in defined_funcs,
+            'Function "{}" was declared but not defined!.'
+            ' Disregard the line number.'.format(func),
+            -1)
+
+def process_declare(token_list, i, functions, macros, line_number):
     """
     Process the entire declare, until the ":".
     token_list is the same token_list being used,
@@ -539,15 +535,17 @@ def process_declare(token_list, i, functions, line_number):
 
     c, v = token_list[i]
 
-    check(c == ID, 'The name {} is reserved or illegal.'.format(v), line_number)
-    check(v not in functions, 'The name {} has been used to declare a function.'
+    check(c == ID, 'The name "{}" is reserved or illegal.'.format(v), line_number)
+    check(v not in functions, 'The name "{}" has been used to declare a function.'
         ' Please use another name.'.format(v), line_number)
+    check(v not in macros, 'The name "{}" has been used to declare a macro.'
+        .format(v), line_number)
 
     func_name = v
     i = i + 1
 
     c, v = token_list[i]
-    check(v == LPAREN, 'Expected "(" here. Got {}.'.format(v),
+    check(v == LPAREN, 'Expected "(" here. Got "{}".'.format(v),
         line_number)
     i = i + 1
     
@@ -560,7 +558,7 @@ def process_declare(token_list, i, functions, line_number):
         # There is at least one argument.
         while True:
             c, v = token_list[i]
-            check(c == ID, 'Malformed function declaration.'.format(c),
+            check(c == ID, 'Malformed function declaration: "{}"?'.format(v),
                 line_number)
             args_count = args_count + 1
             i = i + 1
@@ -703,6 +701,44 @@ def process_define(token_list, i, functions, defined_funcs, line_number):
     i = i + 1
 
     return func_name, param_list, i, line_number
+
+
+def process_macro(macros, token_list, i, functions, line_number):
+    """
+    Process the macro and insert into macros dictionary.
+    """
+
+    # i points to the keyword macro
+    i += 1
+
+    length = len(token_list)
+    check(i < length, 'Invalid macro (end reached).', line_number)
+
+    t, macro = token_list[i]
+    check(t == ID, 'Invalid macro name: "{}".'.format(macro), line_number)
+    check(macro not in macros, 'Macro "{}" has already been defined.'
+        .format(macro), line_number)
+    check(macro not in functions, 'Macro cannot have the name of a function: "{}".'
+        .format(macro), line_number)
+
+    i += 1
+    check(i < length, 'Invalid macro (no value found).', line_number)
+    t, value = token_list[i]
+    check(t == NUMBER, 'Macro must have numeric literal value, not "{}"'
+        .format(value), line_number)
+
+    i += 1
+    t, semi = token_list[i]
+    check(t == OPERATOR and semi == SEMICOLON, 'Expected semicolon, but found "{}"'
+        .format(semi), line_number)
+
+    macros[macro] = value
+
+    return i
+
+
+def generate_func_lbl(func_name):
+    return 'F_{}'.format(func_name)
 
 def generate_label(n, line_number):
     return 'COND_{}_{}_ln_{}'.format(randint(0, 1000), n, line_number)

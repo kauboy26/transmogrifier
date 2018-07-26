@@ -1,6 +1,6 @@
 samp1 = '''
 main:
-    a = 1;
+    a = -5 / -5;
     b = a * -a - 89;
     b = -b - b;
 
@@ -47,13 +47,18 @@ samp3 = '''
 
 declare sum(n);
 declare fact(n);
+declare thing();
 
 main:
-    a = fact(8);
+    a = fact(thing() + 2 * -thing() + 3 * thing());
 
     # Assert
     mem(100) = sum(20); # 210
     mem(101) = a;       # 40320
+end
+
+def thing():
+    return 4;
 end
 
 def sum(n):
@@ -108,7 +113,7 @@ end
 samp5 = '''
 declare func1(a, b, c);
 declare f(fa);
-declare func2(a, b);
+# declare func2(a, b);
 
 declare is_prime(n);
 
@@ -267,6 +272,7 @@ def fibo(n):
     l = mem(n + 100);
 
     if n > 1:
+        a = 10;
         return fibo(n - 1) + fibo(n - 2);
     end
 
@@ -399,12 +405,12 @@ samp15 = '''
 declare bsort(start, length);
 
 main:
-    start = 10;
-    length = 50;
+    start = 20;
+    length = 80;
 
     bsort(start, length);
 
-    # Assert mem[10:60] is sorted
+    # Assert mem[20:100] is sorted
 end
 
 def bsort(start, length):
@@ -429,6 +435,7 @@ def bsort(start, length):
     end
 end
 '''
+11
 
 
 samp16 = '''
@@ -496,6 +503,462 @@ def increment(a):
 end
 '''
 
+
+samp19 = '''
+declare h(a, b);
+
+main:
+    a = 1;
+    b = 2;
+end
+
+def h(a, b):
+    if a > b:
+        c = 1;
+    end
+
+    c = 2;
+end
+'''
+
+samp20 = '''
+
+declare len(a);
+declare asce(a);
+
+main:
+    a = array(10);
+    asce(a);
+    b = array(len(a) * 2);
+    asce(b);
+
+    # Assert that a has consecutive ints within it
+    mem(100) = a;
+
+end
+
+def len(a):
+    return mem(a - 1);
+end
+
+def asce(a):
+    i = 0;
+
+    k = array(len(a) * 3);
+
+    while i < len(a):
+        mem(a + i) = i;
+        i = i + 1;
+    end
+end
+
+'''
+
+samp21 = '''
+
+declare rando();
+
+main:
+    n = 10;
+
+    orig = array(n);
+
+    first_half = array(n / 2);
+    sec_half = array(n  - n / 2);
+end
+
+def rando():
+    cool = array(20);
+
+    i = 0;
+    while i < 20:
+        mem(cool + i) = array(10);
+    end
+end
+
+'''
+
+samp22 = '''
+
+declare ms(a);
+declare len(a);
+
+main:
+    arr = array(100);
+
+    ms(arr);
+
+    mem(150) = arr;
+
+end
+
+def ms(a):
+
+    length = len(a);
+
+    if length < 2:
+        return;
+    end
+
+    fh = array(length / 2);
+    sh = array(length - length / 2);
+
+    i = 0;
+    j = 0;
+
+
+    # there's a lot of unneccessary function calling
+    # to ensure that the language works.
+
+    while i < len(fh):
+        mem(fh + i) = mem(a + i);
+        i = i + 1;
+    end
+
+    while j < len(sh):
+        mem(sh + j) = mem(a + i + j);
+        j = j + 1;
+    end 
+
+    ms(fh);
+    ms(sh);
+
+    # Now merge them together
+
+    i = 0;
+    j = 0;
+
+
+    while i < len(fh) and j < len(sh):
+        if mem(fh + i) <= mem(sh + j):
+            mem(a + i + j) = mem(fh + i);
+            i = i + 1;
+        else:
+            mem(a + i + j) = mem(sh + j);
+            j = j + 1;
+        end
+    end
+
+    while i < len(fh):
+        mem(a + i + j) = mem(fh + i);
+        i = i + 1;
+    end
+
+    while j < len(sh):
+        mem(a + i + j) = mem(sh + j);
+        j = j + 1;
+    end
+
+end
+
+def len(a):
+    return mem(a - 1);
+end
+
+'''
+
+samp23 = '''
+
+declare is_palin(a);
+
+
+main:
+    a = "abcdefghijklmnop";
+    mal = "malayalam";
+    b = is_palin(a);
+    c = is_palin(mal);
+
+    # assert
+    mem(20) = b; # 0
+    mem(21) = c; # 1
+end
+
+def is_palin(a):
+
+    length = mem(a - 1) - 1;
+    i = 0;
+    j = length - 1;
+
+    while i < j and mem(a + i) == mem(a + j):
+        i = i + 1;
+        j = j - 1;
+    end
+
+    if i < j:
+        return 0;
+    end
+
+    return 1;
+
+end
+
+'''
+
+samp24 = '''
+
+main:
+    b = array(51);
+
+    i = 0;
+    while i < 50:
+        mem(b + i) = getc();
+        i = i + 1;
+    end
+
+    mem(b + 50) = 0;
+
+    a = "you have entered: ";
+    print(a);
+    print(b);
+end
+'''
+
+samp25 = '''
+macro  xx 25;
+macro zz 40;
+
+declare xx(a);
+
+main:
+    a = xx + zz;
+end
+'''
+
+samp26 = '''
+
+
+main:
+    arr = 0;
+    mem(addrOf(arr)) = array(20);
+
+
+    i = 0;
+    b = 100;
+
+    # mem(100) = arr;
+    mem(b * 2 / 2) = arr;
+
+    while i < mem(arr - 1):
+        mem(arr + i) = i;
+        i = i + 1;
+    end
+end
+
+'''
+
+samp27 = '''
+
+main:
+    # 14 characters long including NULL
+    a = "hello, world!";
+    b = "goooood!";
+end
+
+'''
+
+samp28 = '''
+
+main:
+    a = array(5);
+    i = 0;
+
+    while i < mem(a - 1):
+        if i % 2 == 0: # can be done better with "i & 2"
+            mem(a + i) = "aaaaa";
+        else:
+            mem(a + i) = "ttttt";
+        end
+        i = i + 1;
+    end
+
+    i = 0;
+    j = 0;
+
+    while i < 5:
+        j = 0;
+        while j < 5:
+            mem(5 + i * 5 + j) = mem(mem(a + i) + j);
+            j = j + 1;
+        end
+        i = i + 1;
+    end
+
+end
+
+'''
+
+samp_io1 = '''
+
+main:
+    a = "\\nhello, world!\\n";
+    b = 1 + 1 + print(a);
+
+    c = 'K';
+    outc(c);
+end
+
+'''
+
+tooheavy = '''
+# Bootstrapping my friend
+
+declare eval(str);
+
+main:
+    # The string to evaluate
+    # Make sure it is valid, has only '+' and '*',
+    # and it ends with a semicolon.
+
+    msg = "Type in an expression with only '+' and '*'.\\nMake sure it is valid\\n";
+    prompt = "\\n>>\\t";
+    output = "\\nThe result is: ";
+    
+    print(msg);
+    
+
+    str = array(92);
+    done = 0;
+
+    
+    while not done:
+        print(prompt);
+        i = 0;
+
+        c = getc();
+        while not (c == ';' or c == 'q') and i < 90:
+            mem(str + i) = c;
+            i = i + 1;
+            c = getc();
+            outc(c);
+        end
+
+        outc('\\n');
+
+        if not c == 'q':
+            mem(str + i) = ';';
+            mem(str + i + 1) = 0;
+
+            a = eval(str);
+
+            # Now to display that.
+            print(output);
+
+            i = 10000;
+            div = 0;
+
+            while i:
+                div = a / i;
+                outc(div + '0');
+                a = a - div * i;
+                i = i / 10;
+            end
+        else:
+            done = 1;
+        end
+    
+    end
+end
+
+
+def eval(str):
+    # Create two stacks, one for operands and one for operation
+    num_stack = array(10);
+    op_stack = array(10);
+
+    # pointers to the top of the stack
+    ntop = -1;
+    otop = -1;
+
+    # to store all the parsed elements
+    sl = -1;
+    tokens = array(15);
+
+    i = 0;
+
+    c = mem(str + i);
+
+    while c:
+        if c >= '0' and c <= '9':
+            # found a number, capture the whole thing.
+            num = c - '0';
+
+            i = i + 1;
+            c = mem(str + i);
+            while c >= '0' and c <= '9':
+                num = num * 10 + (c - '0');
+                i = i + 1;
+                c = mem(str + i);
+            end
+
+            # "i" should now be pointing to a non-numeric character
+            # the number is loaded into "num"
+
+            sl = sl + 1;
+            mem(tokens + sl) = num;
+        elif c == '+':
+            sl = sl + 1;
+            mem(tokens + sl) = -2;
+            i = i + 1;
+        elif c == '*':
+            sl = sl + 1;
+            mem(tokens + sl) = -1;
+            i = i + 1;
+        elif c == ';':
+            sl = sl + 1;
+            mem(tokens + sl) = -3;
+            i = i + 1;
+        else:
+            # eat up other characters
+            i = i + 1;
+        end
+
+        c = mem(str + i);
+    end
+
+
+    # at this point, all tokens loaded
+
+    i = 0;
+    res = 0;
+
+    while i <= sl:
+        curr = mem(tokens + i);
+
+        if curr >= 0:
+            # it's a number
+            ntop = ntop + 1;
+            mem(num_stack + ntop) = curr;
+        else:
+
+            while otop >= 0 and curr <= mem(op_stack + otop):
+
+                operation = mem(op_stack + otop);
+                otop = otop - 1;
+
+                num1 = mem(num_stack + ntop);
+                num2 = mem(num_stack + ntop - 1);
+
+                ntop = ntop - 1;
+
+                if operation == -1:
+                    mem(num_stack + ntop) = num1 * num2;
+                else:
+                    mem(num_stack + ntop) = num1 + num2;
+                end
+            end
+
+            otop = otop + 1;
+            mem(op_stack + otop) = curr;
+        end
+
+        i = i + 1;
+    end
+
+
+    return mem(num_stack + ntop);
+
+end
+'''
 
 samps = [   samp1, samp2, samp3, samp4, samp5, samp6,\
             samp7, samp8, samp9, samp10, samp11, samp12,\

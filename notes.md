@@ -29,7 +29,7 @@ now being enforced.
 When processing "if" statement bodies, variables may be created for that block, and may be destroyed later as we leave that block. In order to keep track of which variables were created and need to be destroyed in a certain block, the vars_this_block stack will be used. As each "end" is encountered, variables that were last created will be destroyed.  
 The curr_scope_type is to keep track of the innermost scope we're in (are we in "if", "while", "def", "main", etc?). This is used to resolve what the keyword "end" needs to do, since its meaning changes depending on the scope type. For example, an "end" encountered when the scope type is an "if" statement means we need to delete some variables, but an "end" encountered when the scope type is "def" means we need to generate code to clean-up the stack and return to the caller.
 
-## Note 5
+## Note 5 -- OUTDATED
 The meaning of CREATE:  
 CREATE, to the IRMachine, means if the second operand is not the stack top ($): claim space for the new variable, and set the value to whavever it should be. If the second oeprand is the top of the stack: claim space (by eating up the top of the stack) and mark this assign this space to the new variable.  
 Also EQUAL will EAT THINGS from the stack!
@@ -55,6 +55,27 @@ The MEM instruction, though it looks like a function if you look at the syntax, 
 
 ## Note 11
 Depending on whether the value to be assigned to is of type STACK TOP, the location to be looked at will change. If we are trying to accomplish something like ```mem(1 + 1) = 1 + 1;```, in the end we are trying to do ```mem($1) = $2;```. Here, $1 will be found below $2 on the stack.
+
+## Note 12
+The purpose of adding variables to the dictionary (in the parser) and so on is just a syntax check. It DOES NOT affect the way the IRMachine executes.
+
+## Note 13
+The number of variables to be created for a method is known at compilation. Therefore, on method set up, all the variables can be created (i.e. space for them can be allocated on the stack). This helps with variable-sized arrays because now the size of an array does not affect the location of a variable that is created (initialized) later, since all variables are created in the very beginning.
+
+## Note 14
+The length of an array is stored in the memory location right before the first element. See the "len" method that has been written in a couple of the test cases.
+
+# LC3 Notes
+
+## Note 1
+The less-than and less-than-eq operators had an issue with commutativity. Since they were reusing the gthan and gthaneq operators by simply flipping the arguments, when the arguments were both of type "$", ```lthan($, $) --> gthan($, $)```, so effectively a gthan operation was being called.
+
+## Note 2
+The strings are stored consecutively starting at 0x2800 in memory. When a string is to be created on the stack, the string is copied over from here. Since the location of the strings are known at compilation time, a hardcoded ```set``` is called to get the pointer.
+
+## Note 3
+PUTS and OUTC are defined in the language as "vanishing" functions. Basically, removing them will not alter the flow of the program in any way or change the state of the machine it is running on (i.e. the registers and memory must not be modified).  
+Since on PUTS and OUTC calls, R0 must be loaded with an address (in the case of PUTS) or an ASCII value (for OUT), the current value in R0 is moved to TEMP, and later moved back to R0. We are free to use TEMP, since in this compiler there are no guarantees provided (between methods) on whether TEMP will be used or not.
 
 # Other issues
 
