@@ -829,7 +829,10 @@ main:
             mem(str + i) = c;
             i = i + 1;
             c = getc();
+            outc(c);
         end
+
+        outc('\\n');
 
         if not c == 'q':
             mem(str + i) = ';';
