@@ -26,7 +26,7 @@ main:
 end
 
 
-# Finally, the function declarations.
+# The function definitions:
 def function1(j, k, l):
     # Note that the param names do not have to match the names given during
     # declaration. However, there must still be three params.
@@ -64,6 +64,7 @@ def function3(a):
     # have to worry about it.
     function2();
 
+    # There are no "for" loops in this language.
     i = 0;
     while i < 20:
         i = mem(i) + i * i;
