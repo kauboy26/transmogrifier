@@ -1529,6 +1529,11 @@ class LC3Converter():
     def smart_set(self, target_reg, value):
         """
         Puts a number into a register.
+
+        There is a recursive version that generates the best assembly
+        code possible. However, that version takes too long to run, and
+        until I come up with DP version of it, this version will have to
+        do.
         """
         instr = []
 
@@ -1536,21 +1541,39 @@ class LC3Converter():
             instr += [ ( LADDI, (target_reg, ZERO, value))]
             return instr
 
-        # For now just let it loop, I'll write a better version later
-        if value < -16:
-            instr += [ ( LADDI, (target_reg, ZERO, -16))]
-            value += 16
-            while value < -16:
-                instr += [ ( LADDI, (target_reg, target_reg, -16))]
-                value += 16
-            instr += [ ( LADDI, (target_reg, target_reg, value ))]
-        else:
-            instr += [ ( LADDI, (target_reg, ZERO, 15))]
-            value -= 15
-            while value > 15:
-                instr += [ ( LADDI, (target_reg, target_reg, 15))]
-                value -=15
-            instr += [ ( LADDI, (target_reg, target_reg, value ))]
+        is_neg = value < -16
+
+        value = abs(value)
+        st = 1 << 15
+        hold = 0
+        built = 0
+
+        for i in range(16):
+            if built:
+                built = built * 2
+                instr += [ ( LADDR, ( target_reg, target_reg, target_reg ) )]
+
+            hold = hold * 2
+
+            if st & value:
+                hold += 1
+
+            if hold >= 8:
+                if built:
+                    instr += [ ( LADDI, (target_reg, target_reg, hold ))]
+                else:
+                    instr += [ ( LADDI, (target_reg, ZERO, hold ))]
+                built += hold
+                hold = 0
+
+            st = st >> 1
+
+        if hold:
+            instr += [ ( LADDI, (target_reg, target_reg, hold ))]
+
+        if is_neg:
+            instr += [ ( NOT, (target_reg, target_reg) )]
+            instr += [ ( LADDI, (target_reg, target_reg, 1 ))]
 
         return instr
 
