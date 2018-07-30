@@ -1501,13 +1501,18 @@ class LC3Converter():
 
     def smart_add(self, dest_reg, src_reg, number):
         """
-        Adds a fixed amount to a number
+        Adds a fixed amount to a number.
         """
         
         if -16 <= number <= 15:
             return [(LADDI, (dest_reg, src_reg, number))]
 
         instr = []
+
+        if dest_reg != src_reg:
+            instr += self.smart_set(dest_reg, number)
+            instr += [ ( LADDR, (dest_reg, dest_reg, src_reg )) ]
+            return instr
 
         if number < -16:
             instr += [(LADDI, (dest_reg, src_reg, -16))]

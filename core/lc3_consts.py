@@ -46,7 +46,7 @@ OP1 = R1
 TEMP = R2
 
 ZERO = R3
-TABLE = R4 # should hold x2000
+TABLE = R4 # should hold value of TABLE_TXT
 
 FP = R5
 SP = R6
