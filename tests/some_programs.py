@@ -825,6 +825,8 @@ main:
         i = 0;
 
         c = getc();
+        outc(c);
+
         while not (c == ';' or c == 'q') and i < 90:
             mem(str + i) = c;
             i = i + 1;

@@ -95,23 +95,24 @@ def gen_asm(tree, table, str_table=[]):
     i = 0
     j = 0
 
-    output += '.orig x2000\n;; JUMP TABLE:\n'
+    output += '.orig {}\n;; JUMP TABLE:\n'.format(TABLE_TXT)
     
     for lbl, val in table:
-        output += '\t.fill \tx{}\t; {}\n'.format(format(0x3000 + val, '04x'), lbl)
+        output += '\t.fill \tx{}\t; {}\n'.format(format(0x3003 + val, '04x'), lbl)
 
     output += ';; END OF JUMP TABLE\n.end\n'
 
-    output += '\n\n.orig x2800\n;; STR TABLE:\n'
+    output += '\n\n.orig {}\n;; STR TABLE:\n'.format(STR_TABLE_TXT)
 
     for s in str_table:
-        output += '\t.stringz \t{}\n'.format(repr(s))
+        output += '\t.stringz \t"{}"\n'.format(repr(s)[1:-1])
 
     output += ';; END OF STR TABLE\n.end\n\n'
 
-    output += '.orig x2FFE\n;; CODE:\n'
-    output += '{}\t\t .fill \txF000\n'.format(STACK_LBL)
-    output += '{}\t\t .fill \tx2000\n'.format(TABLE_LBL)
+    output += '.orig x3000\n;; CODE:\n'
+    output += '\n\tbrnzp #2 \t; The code effectively starts at x3003\n'
+    output += '{}\t\t .fill \t{}\n'.format(STACK_LBL, STACK_TXT)
+    output += '{}\t\t .fill \t{}\n'.format(TABLE_LBL, TABLE_TXT)
 
     output += '\n\n'
 
