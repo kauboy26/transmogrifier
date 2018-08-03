@@ -41,53 +41,46 @@ I plan to do these too, but probably when the compiler is re-written:
 
 ## Arithmetic, logical, relational and bitwise operations
 `
-# Comments start with a "#".  
-# Arithmetic:  
 a = 10 + (1 * 9 - 2 % 5 / 3);  
-# Bitwise:  
 b = a & (a | ~a);  
-# Logical:  
 c = a and (b or not a);  
-# Relational:  
 d = c >= b or c < 5 and (1 == a);  
 `
 
 ## Variables
 Variables are automatically created on the stack when they are first mentioned. They are destroyed along with the scope in which they were created. The `end` keyword marks the end of some scope.  
 `
-var1 = 20; # var1 is created when it is first mentioned.  
+var1 = 20;  
 if 1:  
-    var2 = 30; # var2 and b are created when they are first mentioned.  
+    var2 = 30;  
     b = 20;  
 end  
-# var2 and b do not exist here. Calling them will be a syntax error.  
 `
+`var2` and `b` do not exist outside the `if` block, which ends at `end`.
 
 ## Direct memory IO
 Memory can be read from and written to.  
 `
 aa = 50;  
-mem(aa) = 100; # puts "100" at memory location 50  
-mem(aa) = mem(aa) * 2; # Doubles the value at location 50  
+mem(aa) = 100;  
+mem(aa) = mem(aa) * 2;  
 `
+The value `100` is written to memory location `50`.
 
 ## Functions and function calls
 This compiler follows the LC3 calling convention.
 `
-# declare functions first  
 declare func1(a, b);  
-# The main method is not a normal function. Put it right after the function declarations.  
 main:  
     a = func1(2, 3);
 end  
 def func1(j, k):
-    # The param names don't need to match the declaration.  
     if 1:  
         return 20;  
     end  
-    # The function doesn't have to return something.
 end
 `
+Functions must be declared before the `main` method, and defined after. Functions do not have to return a value. The main method isn't a normal function the way it is in some other languages.
 
 ## Control flow
 There are `if`, `elif`, `else` and `while` keywords (no `for`, `switch`, `break` or `continue`).
@@ -103,9 +96,10 @@ end
 `
 
 ## An "address of" operator
+The following increments `a`:  
 `
 a = 50;  
-mem(addrOf(a)) = mem(addrOf(a)) + 1; # Increments "a"  
+mem(addrOf(a)) = mem(addrOf(a)) + 1;  
 `
 
 ## Strings and variable length arrays
@@ -113,23 +107,24 @@ Arrays and strings are both created on the stack.
 `
 a = 50;
 b = array(a);  
-# b contains the address of the first element of the array  
-c = "hello, world!"; # null terminated
-# c points to the first character
+c = "hello, world!";  
 `
+`b` points to the first element of an array with "`a`" characters (here `50`). `c` points to the first character, i.e, it contains the address of "`h`".
 
 In addition, the length of the string or array is stored at index `-1`:  
 `
-a = array(20); # a points to item at index 0
+a = array(20);  
 length = mem(a - 1);  
 `
 The length of a string includes the `null` character at the end. So, `"hello"` will give you a length of 6.
 
 ## Console IO
-You can read input with the `getc()` function. Print using `outc(c)` and `print(s)`. `print(s)` takes a pointer to a character, and keeps printing until a `null` character is reached. `outc(c)` simply prints the ASCII value of `c`.  
+You can read input with the `getc()` function, which reads one character at a time. Print using `outc(c)` and `print(s)`. `print(s)` takes a pointer to a character, and keeps printing until a `null` character is reached. `outc(c)` simply prints the ASCII value of `c`.  
 `
+your_char = getc();  
 a = "hello, world!";  
 print(a);  
 outc('X');  
-# Console will display "hello, world!X"  
 `
+The console output will look like this:  
+`hello, world!X`
