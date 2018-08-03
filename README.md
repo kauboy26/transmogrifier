@@ -109,7 +109,7 @@ a = 50;
 b = array(a);  
 c = "hello, world!";  
 ```
-`b` points to the first element of an array with "`a`" characters (here `50`). `c` points to the first character, i.e, it contains the address of "`h`".
+`b` points to the first element of an array with "`a`" elements (here `50`). `c` points to the first character, i.e, it contains the address of "`h`".
 
 In addition, the length of the string or array is stored at index `-1`:  
 ```
