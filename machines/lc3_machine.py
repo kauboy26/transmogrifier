@@ -34,6 +34,7 @@ class LC3Machine():
         self.orig = 0x3000
         self.memsize = 0xFFFF
         self.pc = 0
+        self.CC = 0
         self.is_running = False
 
         self.seed = randint(0, 10000)
@@ -159,8 +160,10 @@ class LC3Machine():
             self.getc()
         elif instruction == LOUT:
             self.out()
-        elif instruction == TRAP:
+        elif instruction == LTRAP:
             self.trap(operands)
+        else:
+            assert(False)
 
 
     def addi(self, operands):
@@ -301,6 +304,7 @@ class LC3Machine():
         while self.buf_ptr >= len(self.buffer):
             self.buf_ptr = 0
             self.buffer = input()
+            self.buffer += '\n'
 
         c = self.buffer[self.buf_ptr]
         self.buf_ptr += 1

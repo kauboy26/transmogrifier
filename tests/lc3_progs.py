@@ -1,222 +1,267 @@
-lsamp1 = '''
+lsamp_th = '''
+
+declare eval(str, vars, evars);
+declare is_alpha(c);
+declare index(a, b);
+declare prec(c);
+declare  do_op(n1, n2, op);
+declare print_num(a);
+
+
+
+macro NUM_VARS  199;
+macro ID    0;
+macro NUMBER 1;
+macro OPER  2;
+
+
 
 main:
-    a = 0;
-    b = 5;
-    i = 0;
+    # The string to evaluate
+    # Make sure it is valid, has only '+' and '*',
+    # and it ends with a semicolon.
+
+    init_msg = "Not Python 3.5.2 (default, Jul 31 2018, 12:52:01)\\n[tranny 5.4.0 20160609] on lc3\\n";
+    prompt = "\\n>>> ";
     
-    while a < b:
-        temp = a + 1;
-        i = i + temp * temp;
-        a = temp;
-    end
+    print(init_msg);
+    
+    buffer = array(100);
+    vars = array(NUM_VARS);
+    evars = array(NUM_VARS);
 
-end
-'''
+    done = 0;
 
-lsamp2 = '''
-
-main:
-    i = 10;
-    if i * 2 == 10 * 2:
-        i = 3;
+    i = 0;
+    while i < NUM_VARS:
+        mem(vars + i) = 0;
+        mem(evars + i) = 0;
         i = i + 1;
-    elif i == 3:
-        i = 2;
     end
+    
+    while not done:
+        print(prompt);
+        i = 0;
 
-    if 8 * 8 <= 64:
-        if 1 >= 8:
-            i = 30;
-        elif i > 2:
-            i = (12 + 12) + (1 + 1 - 1 - 1) + 1;
+        c = getc();
+        outc(c);
+
+        while not (c == '\\n' or c == ';') and i < 95:
+            mem(buffer + i) = c;
+            i = i + 1;
+            c = getc();
+            outc(c);
+        end
+
+        outc('\\n');
+
+        if not c == ';':
+            mem(buffer + i) = ';';
+            mem(buffer + i + 1) = 0;
+
+            eval(buffer, vars, evars);
+
+        else:
+            done = 1;
         end
     end
-
-    # i should be 25;
-    # Also pay close attention to how much of the stack was occupied.
-    # When there are no functions being called, if there are "n" variables,
-    # the stack size should be at most n + 1 (max stack size possible).
-    # Look at garbage left in the stack to ensure this.
 end
 
-'''
+def index(str, l):
+    # Finds where a variable should sit by finding the Rabin Karp hash
+    # and then modding it.
 
-lsamp3 = '''
+    hash = 0;
+    i = 0;
 
-main:
-    b = 12;
-    a = (12 + 12) + (b + b - b - b) + 1;
-
-    # a should be 25
-    # b should be 12
-end
-
-'''
-
-lsamp5 = '''
-
-main:
-    a = 10;
-    b = 20;
-    c = 7;
-    d = 8;
-    e = c & d;
-    f = c | d;
-
-    if a + b > b + b and not not b + 20 or (b - b) or not 28:
-        b = 30;
+    while i < l:
+        c = mem(str + i);
+        hash = hash * 17 + c;
+        i = i + 1;
     end
 
-end
-
-'''
-
-lsamp4 = '''
-
-main:
-    c = 7;
-    d = 8;
-    e = c & d;
-    f = c | d;
-    g = (~f) + 1;
+    return hash % 199;
 
 end
 
-'''
 
-lsamp6 = '''
+def eval(str, vars, evars):
+    # Create two stacks, one for operands and one for operation
+    num_stack = array(20);
+    type_stack = array(20);
+    op_stack = array(20);
 
-main:
-    c = 0;
-    a = 49;
-    b = -7;
-    c = a / b;
-    d = a / -b;
-    e = (a + b) / (a - b);
-    f = (a + b) * (a - b);
-    # g = a % b;
-end
+    # pointers to the top of the stack
+    ntop = -1;
+    otop = -1;
 
-'''
+    # to store all the parsed elements
+    sl = -1;
+    tokens = array(100);
+    token_types = array(100);
 
-lsamp7 = '''
+    i = 0;
 
-main:
-    a = 10;
-    b = 7;
-    g = a % b;
+    c = mem(str + i);
 
-    if (a + b) * (a - b) % (a + b - 4) == 13 - 1:
-        g = -666;
+    while c:
+        if c >= '0' and c <= '9':
+            # found a number, capture the whole thing.
+            num = c - '0';
+
+            i = i + 1;
+            c = mem(str + i);
+            while c >= '0' and c <= '9':
+                num = num * 10 + (c - '0');
+                i = i + 1;
+                c = mem(str + i);
+            end
+
+            # "i" should now be pointing to a non-numeric character
+            # the number is loaded into "num"
+
+            sl = sl + 1;
+            mem(tokens + sl) = num;
+            mem(token_types + sl) = NUMBER;
+
+        elif prec(c) < 0:
+
+            a = "pdd called!";
+            print_num(prec(c));
+            print(a);
+            outc(c);
+            print(a);
+
+            sl = sl + 1;
+            mem(tokens + sl) = c;
+            mem(token_types + sl) = prec(c);
+            i = i + 1;
+
+        elif (c >= 'a' and c <= 'z') or (c >= 'A' and c <= 'Z'):
+
+            a = "other thing called";
+            print(a);
+
+            start = i;
+
+            while is_alpha(c):
+                i = i + 1;
+                c = mem(str + i);
+            end
+
+            sl = sl + 1;
+            mem(tokens + sl) = 0;
+            mem(token_types + sl) = ID;
+
+        
+
+        else:
+            # eat up other characters
+            i = i + 1;
+        end
+
+        c = mem(str + i);
     end
-end
-
-'''
-
-lsamp8 = '''
-
-# declare fib(n);
-declare fib2(n);
-
-main:
-    a = fib2(10);
-end
 
 
-# def fib(n):
-#     if n < 2:
-#         return 1;
-#     end
+    # at this point, all tokens loaded
 
-#     return fib(n - 1) + fib(n - 2);
-# end
+    i = 0;
 
-def fib2(n):
-    if n < 2:
-        return 1;
-    end
+    while i <= sl:
+        curr = mem(tokens + i);
+        type = mem(token_types + i);
 
-    a0 = 1;
-    a1 = 1;
-    ans = 0;
+        if type == NUMBER:
+            ntop = ntop + 1;
+            mem(num_stack + ntop) = curr;
+            mem(type_stack + ntop) = NUMBER;
+        elif type < 0:
+            # An operator
+            while otop >= 0 and prec(curr) <= prec(mem(op_stack + otop)):
 
-    n = n - 1;
+                operation = mem(op_stack + otop);
+                otop = otop - 1;
 
-    while n:
-        ans = a0 + a1;
-        a0 = a1;
-        a1 = ans;
-        n = n - 1;
-    end
+                num2 = mem(num_stack + ntop);
+                num1 = mem(num_stack + ntop - 1);
 
-    return ans;
-end
-'''
+                ntop = ntop - 1;
 
-lsamp9 = '''
+                temp = 0;
 
-declare f(a, b, c, d, e);
+                if operation == '=':
+                else:
+                    temp = do_op(num1, num2, operation);
+                end
 
-main:
-    a = 1;
-    b = 2;
-    c = 3;
-    d = 4;
-    e = 5;
+                mem(num_stack + ntop) = temp;
+                mem(type_stack + ntop) = NUMBER;
 
-    g = f(a, b, c, d, e);
-    h = f(a, a + a, a + b, d, b + c);
-    i = f(1, 2, a + a + a, a + a + a + a, 5 - 1 + 1);
-end
+            end
 
-def f(a, b, c, d, e):
-    return 1 * a + 2 * b + 3 * c + 4 * d + 5 * e;
-end
-'''
-
-lsamp10 = '''
-
-declare is_prime(n);
-
-main:
-    a = is_prime(100 + 99 - 100 + 100);
-end
-
-def is_prime(num):
-
-    prime = 1;
-
-    i = 2;
-
-    while i * i < num:
-
-        if num % i == 0:
-            prime = 0;
-            i = num; # to exit the loop
+            otop = otop + 1;
+            mem(op_stack + otop) = curr;
         end
 
         i = i + 1;
     end
 
-    return prime;
-end
-'''
 
-lsamp11 = '''
+    result = mem(num_stack + ntop);
+    print_num(result);
 
-declare swap(a, b);
-
-main:
-    a = 10;
-    b = 5;
-    swap(addrOf(a), addrOf(b));
 end
 
-def swap(a, b):
-    temp = mem(a);
-    mem(a) = mem(b);
-    mem(b) = temp;
+def prec(a):
+    if a == '*' or a == '/' or a == '%':
+        return -10;
+    elif a == '+' or a == '-':
+        return -20;
+    elif a == ')' or a == ';':
+        return -50;
+    elif a == '(':
+        return -1;
+    end
+
+    return 99;
+end
+
+def is_alpha(n):
+    return n >= 'a' and n <= 'z' or n >= 'A' and n <= 'Z' or n >= '0' and n <= '9'; 
+end
+
+def do_op(n1, n2, op):
+    if op == '*':
+        return n1 * n2;
+    elif op == '/':
+        return n1 / n2;
+    elif op == '%':
+        return n1 % n2;
+    elif op == '+':
+        return n1 + n2;
+    elif op == '-':
+        return n1 - n2;
+    end
+end
+
+def print_num(n):
+    a = 10000;
+    dig = 0;
+
+    if n < 0:
+        outc('-');
+        n = -n;
+    end
+
+    
+
+    while a:
+        dig = n / a;
+        n = n % a;
+        a = a / 10;
+        outc(dig + '0');
+    end
 end
 
 '''

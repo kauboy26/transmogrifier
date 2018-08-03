@@ -175,7 +175,7 @@ class IRMachine1():
         """
         Print the "registers"
         """
-        print('***************************\nPrinting regs:')
+        # print('***************************\nPrinting regs:')
         print('CC:', self.cc)
         print('SP:', self.sp)
         print('FP:', self.fp)
@@ -536,6 +536,7 @@ class IRMachine1():
         """
         while self.buf_ptr >= len(self.buffer):
             self.buffer = input()
+            self.buffer += '\n'
             self.buf_ptr = 0
 
         c = self.buffer[self.buf_ptr]
