@@ -1,5 +1,6 @@
 # About
-Transmogrifier is a compiler targeting the LC3 ISA. The project is more or less done, other than some polishing that may be required in a few places. Some sample files can be found [here](https://github.com/kauboy26/transmogrifier/blob/master/sample_files/model_program.txt).  
+Transmogrifier is a compiler targeting the LC3 ISA. The project is more or less done, other than some polishing that may be required in a few places. Some cool programs and their sample source files can be found [here](https://github.com/kauboy26/lc3-collection).  
+
 
 The entire compiler was written in "pure" Python. If you go through the source code of the modules used in the compiling process (look in the `core` folder), you'll see that only the `random` library was used. Since the lexer and parser were hand-written, the syntax-error diagnosing capabilities of the compiler are limited although I've tried to make the error messages as helpful as possible. In the future, **expect the entire compiler to be re-written**, with the help of tools like `flex` and `bison`. The re-written compiler will have wonderful diagnostic messages and optimizing capabilites.
 
@@ -13,10 +14,10 @@ The first purpose of this project is to demonstrate that the LC3 can do a good n
 The second purpose is to show what compiled code looks like. Since the output is unoptimized and pieces of the intermediate representation are left in, it should be somewhat easy to map the generated instructions to the original code.
 
 ## Usage
-If you have the source code, go to the directory containing `tcc.p`. Then, run:  
-`
+If you have the source code, go to the directory containing `tcc.py`. Then, run:  
+```
 $ python3 tcc.py filename  
-`
+```
 where `filename` is the file containing the source code you want to compile to LC3 assembly. Expect to see a `filename.asm` file containing the LC3 assembly in the same directory.  
 
 I recommend creating a one-line shell script that you can call from anywhere to invoke the compiler.  
